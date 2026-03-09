@@ -1,11 +1,16 @@
 <p align="center">
-  <img src="assets/logo.png" width="250" alt="Specwatch Logo">
+  <img src="assets/logo.png" width="220" alt="Specwatch logo">
 </p>
 
 <h1 align="center">Specwatch</h1>
 
 <p align="center">
-  <strong>Blazing fast, spec-driven static analysis for modern architecture.</strong>
+  <strong>Keep architecture from drifting while you code.</strong>
+</p>
+
+<p align="center">
+  Specwatch watches your repo, reads a local <code>spec.md</code>, runs fast static checks first,
+  and escalates to AI only when a rule needs semantic judgment.
 </p>
 
 <p align="center">
@@ -13,178 +18,215 @@
   <img src="https://img.shields.io/github/go-mod/go-version/rajeshshrirao/specwatch?style=flat-square" alt="Go Version">
   <img src="https://img.shields.io/github/license/rajeshshrirao/specwatch?style=flat-square" alt="License">
   <img src="https://img.shields.io/github/actions/workflow/status/rajeshshrirao/specwatch/ci.yml?style=flat-square" alt="CI">
-  <img src="https://img.shields.io/badge/contributions-welcome-2DCC8F.svg?style=flat-square" alt="Contributions Welcome">
 </p>
 
 ---
 
-## ⚡ The Architectural Sentinel
+## Why Specwatch
 
-Traditional linters enforce *how* you write code. **Specwatch** enforces *what* you build. By defining your project's architectural soul in a simple `spec.md`, Specwatch ensures your vision stays intact from the first commit to the millionth line.
+Most tooling tells you whether code is valid.
 
-### 🏗️ The Vision
+Specwatch tells you whether code still matches the architecture you intended.
 
-```mermaid
-graph TD
-    A[spec.md] -->|Parses| B{Rules Engine}
-    B -->|Fast Path| C[Static Analysis]
-    B -->|Deep Path| D[AI Semantic Check]
-    C -->|Results| E[Real-time TUI]
-    D -->|Results| E
-    E -->|Feedback| F[Developer]
-    F -->|Fixes| A
-```
+That makes it useful for:
 
-> **Target Performance:** Sub-10ms static checks. Max 1 LLM call per 10 file saves.
+- AI-assisted coding loops where code gets generated faster than humans review structure
+- protecting boundaries like `no business logic in components`
+- keeping imports, file size, naming, and layering aligned with project rules
+- surfacing drift immediately in the terminal instead of after review or CI
 
----
-
-## ✨ Features
-
-- 🏎️ **Extreme Speed**: Static checks using regex and AST analysis run in milliseconds.
-- 🎯 **Spec-First**: Centralized `spec.md` defines naming, structure, and boundaries.
-- 🖥️ **Premium TUI**: A three-panel dashboard with activity feeds and live stats.
-- 🧠 **Smart AI**: LLMs are used surgically only for high-level semantic rules.
-- 🔄 **Live Watch**: Responsive file system watcher with intelligent debouncing.
-- 📊 **CI-Ready**: Seamlessly integrates into your pipelines with JSON/Text reporting.
-
----
-
-## 🖥️ Premium TUI Experience
-
-Experience a terminal interface that feels like a mission control for your codebase.
-
-- **Activity Feed**: Rolling history of file checks with status indicators.
-- **Violation Center**: Navigable list of rules being broken, sorted by severity.
-- **Live Stats**: Real-time counters for errors, warnings, and file coverage.
-- **Detail View**: Expand any violation to see the offending code and fix suggestions.
-
----
-
-## 🚀 Quick Start
-
-### 📦 Installation
-
-```bash
-# Using Go
-go install github.com/rajeshshrirao/specwatch@latest
-
-# Verify
-specwatch --version
-```
-
-### 🏁 Getting Started
-
-1. **Initialize your specs**:
-   ```bash
-   specwatch init
-   ```
-2. **Launch the Sentinel**:
-   ```bash
-   specwatch watch ./src
-   ```
-
----
-
-## ⚙️ Configuration
-
-Control Specwatch behavior via `.specwatch.yml`.
-
-```yaml
-llm.enabled: true
-
-# .specwatch.yml
-llm:
-  provider: anthropic
-  model: claude-haiku-4-5-20251002
-  
-watch:
-  debounce: 800
-  extensions: [go, ts, tsx, js, jsx]
-  skip: [naming]
-```
-
-### 🧠 Smart LLM Usage
-
-For AI-powered checks, configure your provider API key:
-
-```bash
-# Using Anthropic (default: claude-haiku-4-5-20251002)
-export ANTHROPIC_API_KEY="your-key-here"
-
-# Using OpenRouter (default: anthropic/claude-4.5-haiku-20250929)
-export OPENROUTER_API_KEY="your-key-here"
-
-# Using Google Gemini (default: gemini-2.0-flash)
-export GEMINI_API_KEY="your-key-here"
-
-# Or use the login command
-specwatch login --provider anthropic --api-key YOUR_KEY
-```
-
-**Supported Providers:**
-- **Anthropic**: Claude Haiku 4.5, Sonnet, Opus
-- **OpenRouter**: 300+ models including Claude variants
-- **Google Gemini**: Gemini Flash, Pro models
-
-**AI Budget**: AI analysis fires at most once per 10 file saves, only for architecture-section rules, after static analysis passes.
-
-**Intelligence Profile:**
-- **Trigger**: Fires primarily on `## architecture` section rules.
-- **Scope**: Handles semantic tasks like "no business logic in UI components".
-- **Efficiency**: aggressive caching ensures your development loop stays fast.
-
----
-
-## 📖 Command Reference
-
-| Command | Short Description |
-|:---|:---|
-| `specwatch init` | Create a fresh `spec.md` template |
-| `specwatch watch [path]` | Start real-time monitoring and TUI |
-| `specwatch check [path]` | One-shot analysis for CI environments |
-
-### 🛠️ Advanced Flags
-
-**Watch Mode:**
-```bash
-specwatch watch ./src --ext ts,tsx      # Filter by extension
-specwatch watch ./src --debounce 1200   # Custom debounce (ms)
-specwatch watch ./src --skip "limits"   # Ignore specific categories
-```
-
-**Check Mode:**
-```bash
-specwatch check ./src --format json     # Machine-readable output
-```
-
----
-
-## 🏗️ Technical Architecture
+## How It Works
 
 ```mermaid
 flowchart LR
-    CLI[Cobra CLI] --> Engine[Analysis Engine]
-    Engine --> Parser[spec.md Parser]
-    Engine --> Analyzers[Analyzers]
-    subgraph Analyzers
-        A1[Forbidden]
-        A2[Naming]
-        A3[Limits]
-        A4[Architecture]
-    end
-    Engine --> TUI[Bubble Tea Dashboard]
-    Engine --> CI[Reporter System]
+    A["spec.md"] --> B["Rule parser"]
+    B --> C["Static checks"]
+    C --> D{"Static passed?"}
+    D -- "No" --> E["Report drift immediately"]
+    D -- "Yes" --> F{"Architecture rule + AI enabled?"}
+    F -- "No" --> E
+    F -- "Yes" --> G["LLM semantic check"]
+    G --> E
+    E --> H["Live TUI or CI output"]
 ```
 
----
+The current core loop is:
 
-## 🤝 Contributing
+1. Parse `spec.md`
+2. Run static analysis first
+3. If AI is enabled, only escalate architecture rules
+4. In watch mode, budget AI to at most 1 call per 10 saves
+5. Show live drift in the TUI or emit CI-friendly output in `check`
 
-We love architectural purity and fast code! See our [Contributing Guide](CONTRIBUTING.md) to get started.
+## Highlights
+
+- Fast local checks for forbidden patterns, imports, naming, limits, required patterns, and basic architecture heuristics
+- Live watch mode with a polished Bubble Tea terminal UI
+- Resolved drift now clears correctly on common editor save patterns
+- Optional AI checks for architecture rules when static analysis passes first
+- Local per-repo config through `.specwatch.yml`
+- Simple CLI for `init`, `watch`, `check`, and provider setup
+
+## Quick Start
+
+### Install
+
+```bash
+go install github.com/rajeshshrirao/specwatch@latest
+```
+
+### Create a spec
+
+```bash
+mkdir my-app && cd my-app
+specwatch init
+```
+
+This creates a starter `spec.md` that you can tune to your repo.
+
+### Start watching
+
+```bash
+specwatch watch .
+```
+
+### Run a one-shot check
+
+```bash
+specwatch check .
+```
+
+## The Two Files That Matter
+
+### `spec.md`
+
+This is the contract for your codebase.
+
+Example:
+
+```md
+## forbidden
+- pattern: "console.log"
+  message: use logger utility from @/lib/logger
+
+## architecture
+- no direct db calls outside src/lib/db
+- no business logic in components - belongs in hooks or lib
+
+## limits
+- max file lines: 300
+- max imports per file: 20
+```
+
+### `.specwatch.yml`
+
+This is optional runtime config and should live next to `spec.md`.
+
+```yaml
+llm:
+  enabled: true
+  provider: anthropic
+  model: claude-haiku-4-5-20251002
+
+watch:
+  debounce: 800
+  extensions: [go, ts, tsx, js, jsx]
+```
+
+If `.specwatch.yml` does not exist, Specwatch falls back silently to built-in defaults.
+
+## AI Checks
+
+AI is intentionally constrained.
+
+- Static analysis always runs first
+- AI only participates for rules from the `## architecture` section
+- AI only runs when static analysis produced no violations for that file
+- In watch mode, AI is limited to 1 call per 10 file saves
+- If Anthropic is selected and `ANTHROPIC_API_KEY` is missing, Specwatch continues and prints a one-time warning
+
+Set up a provider:
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+```
+
+Or inspect providers/models:
+
+```bash
+specwatch login --provider anthropic --list-models
+```
+
+Supported providers in the codebase:
+
+- `anthropic`
+- `openrouter`
+- `gemini`
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `specwatch init` | Create a starter `spec.md` |
+| `specwatch watch [path]` | Watch files and show live drift in the TUI |
+| `specwatch check [path]` | Run a one-shot check for CI or scripts |
+| `specwatch login` | Validate provider auth and inspect available models |
+
+### Useful Examples
+
+```bash
+specwatch watch . --debounce 1200
+specwatch watch ./src --ext go,ts,tsx
+specwatch watch . --skip limits
+specwatch check . --format json
+specwatch version
+```
+
+## Terminal UI
+
+Watch mode is designed to feel like a live architecture console:
+
+- animated startup and shutdown sequences
+- rolling activity feed with `drift`, `fixed`, and `clean` states
+- violations sorted by severity and recency
+- detail pane with excerpt and suggested fix
+- compact fallback layout for smaller terminals
+
+## Current Scope
+
+What Specwatch is good at today:
+
+- single-repo local enforcement
+- lightweight architectural drift detection
+- fast inner-loop feedback for teams using AI or moving quickly
+
+What is still early:
+
+- architecture detection is still heuristic in places
+- AI gating exists, but the semantic path is intentionally narrow
+- monorepo discovery and deeper project isolation are not the current focus
+
+## Development
+
+```bash
+go build -o specwatch .
+go test -v -race -cover ./...
+go run . watch .
+go run . check .
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If you contribute, keep the bar high:
+
+- fast checks stay fast
+- UI polish should not compromise clarity
+- architecture rules should remain easy to understand and easy to extend
 
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/rajeshshrirao">rajeshshrirao</a>
+  Built by <a href="https://github.com/rajeshshrirao">Rajesh Shrirao</a>
 </p>
