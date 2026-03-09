@@ -10,41 +10,73 @@ import (
 )
 
 type Engine struct {
-	Rules *spec.RuleSet
+	Rules          *spec.RuleSet
+	SkipCategories []string
+	Extensions     []string
 }
 
 func NewEngine(rules *spec.RuleSet) *Engine {
-	return &Engine{Rules: rules}
+	return &Engine{
+		Rules:      rules,
+		Extensions: []string{".ts", ".tsx", ".js", ".jsx"},
+	}
+}
+
+func (e *Engine) shouldSkip(category string) bool {
+	for _, skip := range e.SkipCategories {
+		if strings.EqualFold(skip, category) {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) isSupported(path string) bool {
+	if len(e.Extensions) == 0 {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, supported := range e.Extensions {
+		if !strings.HasPrefix(supported, ".") {
+			supported = "." + supported
+		}
+		if ext == strings.ToLower(supported) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Engine) Analyze(path string) ([]Violation, time.Duration) {
 	start := time.Now()
 	var violations []Violation
 
-	// Only analyze supported files (TS/JS only for now)
-	ext := strings.ToLower(filepath.Ext(path))
-	if ext != ".ts" && ext != ".tsx" && ext != ".js" && ext != ".jsx" {
+	if !e.isSupported(path) {
 		return violations, time.Since(start)
 	}
 
 	// Check forbidden patterns
-	if len(e.Rules.Forbidden) > 0 {
+	if !e.shouldSkip("forbidden") && len(e.Rules.Forbidden) > 0 {
 		violations = append(violations, CheckForbidden(path, e.Rules.Forbidden)...)
 	}
 
 	// Check naming
-	violations = append(violations, CheckNaming(path, e.Rules.Naming)...)
+	if !e.shouldSkip("naming") {
+		violations = append(violations, CheckNaming(path, e.Rules.Naming)...)
+	}
 
 	// Check limits
-	if e.Rules.Limits.MaxFileLines > 0 || e.Rules.Limits.MaxImports > 0 {
+	if !e.shouldSkip("limits") && (e.Rules.Limits.MaxFileLines > 0 || e.Rules.Limits.MaxImports > 0) {
 		violations = append(violations, CheckLimits(path, e.Rules.Limits)...)
 	}
 
 	// Check required try/catch for async functions
-	violations = append(violations, CheckRequiredTryCatch(path)...)
+	if !e.shouldSkip("required") {
+		violations = append(violations, CheckRequiredTryCatch(path)...)
+	}
 
 	// Check import boundaries for architecture rules
-	if len(e.Rules.Architecture) > 0 {
+	if !e.shouldSkip("architecture") && len(e.Rules.Architecture) > 0 {
 		violations = append(violations, CheckImportBoundaries(path, e.Rules.Architecture)...)
 	}
 
@@ -66,8 +98,7 @@ func (e *Engine) AnalyzeAll(root string) ([]Violation, time.Duration) {
 			return nil
 		}
 
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".ts" && ext != ".tsx" && ext != ".js" && ext != ".jsx" {
+		if !e.isSupported(path) {
 			return nil
 		}
 
