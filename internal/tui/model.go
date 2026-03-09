@@ -544,7 +544,7 @@ func (m Model) renderMainView() string {
 		dot := m.renderActivityStatus(item.Status)
 		filename := truncate(filepath.Base(item.File), leftW-18)
 		elapsed := time.Since(item.Timestamp).Round(time.Second).String()
-		leftB.WriteString(fmt.Sprintf("%s %-13s %s\n", dot, filename, StyleActivityTime.Render(elapsed)))
+		fmt.Fprintf(leftB, "%s %-13s %s\n", dot, filename, StyleActivityTime.Render(elapsed))
 	}
 	if len(visAct) == 0 {
 		leftB.WriteString(StyleEmptyMuted.Render("  Waiting for file activity\n"))

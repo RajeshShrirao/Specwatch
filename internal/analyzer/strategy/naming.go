@@ -119,7 +119,7 @@ func isKebabCase(name string) bool {
 		if i > 0 && r == '-' {
 			continue
 		}
-		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')) {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
 			return false
 		}
 	}
@@ -133,12 +133,12 @@ func isCamelCase(name string) bool {
 	}
 	// First char must be lowercase
 	first := name[0]
-	if !((first >= 'a' && first <= 'z') || first == '_') {
+	if (first < 'a' || first > 'z') && first != '_' {
 		return false
 	}
 	// Rest can be alphanumeric
 	for _, r := range name[1:] {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' {
 			return false
 		}
 	}
@@ -152,12 +152,12 @@ func isPascalCase(name string) bool {
 	}
 	// First char must be uppercase
 	first := name[0]
-	if !((first >= 'A' && first <= 'Z') || first == '_') {
+	if (first < 'A' || first > 'Z') && first != '_' {
 		return false
 	}
 	// Rest can be alphanumeric
 	for _, r := range name[1:] {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' {
 			return false
 		}
 	}

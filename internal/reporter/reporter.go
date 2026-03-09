@@ -58,14 +58,22 @@ func GenerateReport(violations []analyzer.Violation, durationMs int64, format st
 
 	case "text":
 		tw := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "FILE\tLINE\tSEVERITY\tRULE\tEXCERPT")
-		for _, v := range violations {
-			fmt.Fprintf(tw, "%s\t%d\t%s\t%s\t%s\n", v.File, v.Line, v.Severity, v.Rule, v.Excerpt)
+		if _, err := fmt.Fprintln(tw, "FILE\tLINE\tSEVERITY\tRULE\tEXCERPT"); err != nil {
+			return err
 		}
-		tw.Flush()
+		for _, v := range violations {
+			if _, err := fmt.Fprintf(tw, "%s\t%d\t%s\t%s\t%s\n", v.File, v.Line, v.Severity, v.Rule, v.Excerpt); err != nil {
+				return err
+			}
+		}
+		if err := tw.Flush(); err != nil {
+			return err
+		}
 
-		fmt.Fprintf(writer, "\nSummary: %d files checked, %d errors, %d warnings, %dms\n",
-			result.Summary.FilesChecked, result.Summary.Errors, result.Summary.Warnings, result.Summary.DurationMs)
+		if _, err := fmt.Fprintf(writer, "\nSummary: %d files checked, %d errors, %d warnings, %dms\n",
+			result.Summary.FilesChecked, result.Summary.Errors, result.Summary.Warnings, result.Summary.DurationMs); err != nil {
+			return err
+		}
 		return nil
 
 	default:

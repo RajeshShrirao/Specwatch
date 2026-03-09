@@ -71,7 +71,11 @@ func (h *HotReloader) Start() error {
 
 // watchLoop watches for configuration changes
 func (h *HotReloader) watchLoop() {
-	defer h.watcher.Close()
+	defer func() {
+		if err := h.watcher.Close(); err != nil {
+			fmt.Printf("Error closing watcher: %v\n", err)
+		}
+	}()
 
 	for {
 		select {

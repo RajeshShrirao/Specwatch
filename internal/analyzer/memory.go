@@ -65,10 +65,11 @@ func GetBuffer() []byte {
 func PutBuffer(buf []byte) {
 	// Only return if it has some capacity (avoid returning empty slices)
 	if cap(buf) > 0 {
-		// Create a new buffer from scratch to avoid pointer issues
-		//#nosec G602
-		newBuf := make([]byte, 0, cap(buf))
-		BufferPool.Put(newBuf)
+		// Reset the length to 0 to return an empty buffer
+		buf = buf[:0]
+		// BufferPool stores []byte directly; using pointer would break existing tests
+		// nolint:staticcheck
+		BufferPool.Put(buf)
 	}
 }
 
