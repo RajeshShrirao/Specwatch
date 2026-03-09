@@ -60,7 +60,7 @@ var watchCmd = &cobra.Command{
 
 		llmClient, warned := setupLLMClient(engine)
 		if llmClient != nil {
-			defer llmClient.Close()
+			defer func() { _ = llmClient.Close() }()
 		}
 
 		w, err := watcher.NewWatcher(watcher.Options{
@@ -71,7 +71,7 @@ var watchCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error creating watcher: %v\n", err)
 			os.Exit(1)
 		}
-		defer w.Close()
+		defer func() { _ = w.Close() }()
 
 		p := tea.NewProgram(tui.InitialModel())
 		saveCounter := 0

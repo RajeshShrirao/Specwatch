@@ -26,7 +26,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		err = tmpl.Execute(file, nil)
 		if err != nil {

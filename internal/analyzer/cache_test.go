@@ -12,14 +12,14 @@ func TestFileCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// Write test content
 	content := "package main\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n"
 	if _, err := tmpFile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Create cache
 	cache := NewFileCache(10, 5) // 10MB cache, 5min TTL
@@ -70,14 +70,14 @@ func TestFileCacheEviction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// Write test content
 	content := "package main\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n"
 	if _, err := tmpFile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Create cache with small size and short TTL
 	cache := NewFileCache(1, 0) // 1 byte (!) to force eviction, 0min TTL
@@ -112,14 +112,14 @@ func TestFileSizeLimitExceeded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// Write small content
 	content := "package main\n"
 	if _, err := tmpFile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Test with large limit (should pass)
 	if FileSizeLimitExceeded(tmpFile.Name(), 100) {

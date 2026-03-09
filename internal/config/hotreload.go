@@ -57,7 +57,10 @@ func (h *HotReloader) Start() error {
 		dir = "."
 	}
 	if err := watcher.Add(dir); err != nil {
-		watcher.Close()
+		err := watcher.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close watcher: %w", err)
+		}
 		return fmt.Errorf("failed to watch config path: %w", err)
 	}
 
@@ -68,7 +71,11 @@ func (h *HotReloader) Start() error {
 
 // watchLoop watches for configuration changes
 func (h *HotReloader) watchLoop() {
-	defer h.watcher.Close()
+	defer func() {
+		if err := h.watcher.Close(); err != nil {
+			fmt.Printf("Error closing watcher: %v\n", err)
+		}
+	}()
 
 	for {
 		select {

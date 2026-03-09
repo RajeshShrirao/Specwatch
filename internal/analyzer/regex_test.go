@@ -39,9 +39,15 @@ func TestPatternCacheEviction(t *testing.T) {
 	cache := NewPatternCache(3)
 
 	// Add more patterns than cache size
-	cache.GetPattern(`^a$`)
-	cache.GetPattern(`^b$`)
-	cache.GetPattern(`^c$`)
+	if _, err := cache.GetPattern("^a$"); err != nil {
+		t.Fatalf("Failed to get pattern: %v", err)
+	}
+	if _, err := cache.GetPattern("^b$"); err != nil {
+		t.Fatalf("Failed to get pattern: %v", err)
+	}
+	if _, err := cache.GetPattern("^c$"); err != nil {
+		t.Fatalf("Failed to get pattern: %v", err)
+	}
 
 	// This should trigger eviction
 	re, err := cache.GetPattern(`^d$`)
