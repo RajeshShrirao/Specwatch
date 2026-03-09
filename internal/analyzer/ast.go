@@ -1,8 +1,6 @@
 package analyzer
 
 import (
-	"bufio"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -10,28 +8,15 @@ import (
 )
 
 // CheckRequiredTryCatch uses heuristics to check for try/catch in async functions
-func CheckRequiredTryCatch(path string) []Violation {
+func CheckRequiredTryCatch(path string, cache *FileCache) []Violation {
 	var violations []Violation
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	lineNum := 0
-	content := ""
-	lines := []string{}
-
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-		lines = append(lines, line)
-		content += line + "\n"
-	}
-
-	for i, line := range lines {
+	for i, line := range content {
 		trimmed := strings.TrimSpace(line)
 		// Skip comments
 		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "/*") || strings.HasPrefix(trimmed, "*") {
@@ -43,8 +28,8 @@ func CheckRequiredTryCatch(path string) []Violation {
 			// Check the next ~10 lines or 400 characters for "try"
 			foundTry := false
 			lookAheadLines := 10
-			for j := i; j < i+lookAheadLines && j < len(lines); j++ {
-				if strings.Contains(lines[j], "try {") || strings.Contains(lines[j], "try{") {
+			for j := i; j < i+lookAheadLines && j < len(content); j++ {
+				if strings.Contains(content[j], "try {") || strings.Contains(content[j], "try{") {
 					foundTry = true
 					break
 				}
@@ -67,7 +52,7 @@ func CheckRequiredTryCatch(path string) []Violation {
 }
 
 // CheckImportBoundaries checks if imports violate architectural rules
-func CheckImportBoundaries(path string, rules []spec.ArchitectureRule) []Violation {
+func CheckImportBoundaries(path string, rules []spec.ArchitectureRule, cache *FileCache) []Violation {
 	var violations []Violation
 
 	// Heuristic: "no direct db calls outside src/lib/db"
@@ -75,18 +60,12 @@ func CheckImportBoundaries(path string, rules []spec.ArchitectureRule) []Violati
 	absPath, _ := filepath.Abs(path)
 	isDbFile := strings.Contains(absPath, "src/lib/db")
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
+	for lineNum, line := range content {
 		if !isDbFile {
 			// Check for direct DB-related keywords or imports if not in DB layer
 			for _, rule := range rules {
@@ -94,7 +73,7 @@ func CheckImportBoundaries(path string, rules []spec.ArchitectureRule) []Violati
 					if strings.Contains(line, " prisma.") || strings.Contains(line, " mongoose.") || strings.Contains(line, " sequelize.") {
 						violations = append(violations, Violation{
 							File:       path,
-							Line:       lineNum,
+							Line:       lineNum + 1,
 							Rule:       "architecture.no_direct_db",
 							Severity:   spec.SeverityError,
 							Excerpt:    strings.TrimSpace(line),

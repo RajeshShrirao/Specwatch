@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rajeshshrirao/specwatch/internal/analyzer"
@@ -28,6 +30,10 @@ var checkCmd = &cobra.Command{
 			fmt.Println("No spec.md found. Run 'specwatch init' to create one.")
 			os.Exit(1)
 		}
+		if err := loadRuntimeConfig(specPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+			os.Exit(1)
+		}
 
 		rules, err := spec.Parse(specPath)
 		if err != nil {
@@ -36,9 +42,17 @@ var checkCmd = &cobra.Command{
 		}
 
 		engine := analyzer.NewEngine(rules)
+		llmClient, _ := setupLLMClient(engine)
+		if llmClient != nil {
+			defer llmClient.Close()
+		}
 
 		start := time.Now()
-		violations, _ := engine.AnalyzeAll(path)
+		violations, err := runCheck(engine, rules, path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error checking files: %v\n", err)
+			os.Exit(1)
+		}
 		duration := time.Since(start)
 
 		if format == "" {
@@ -61,4 +75,34 @@ var checkCmd = &cobra.Command{
 
 func init() {
 	checkCmd.Flags().StringVarP(&format, "format", "f", "", "Output format: json, text")
+}
+
+func runCheck(engine *analyzer.Engine, rules *spec.RuleSet, root string) ([]analyzer.Violation, error) {
+	var all []analyzer.Violation
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		staticViolations, _ := engine.Analyze(path)
+		all = append(all, staticViolations...)
+
+		if len(staticViolations) == 0 && len(rules.Architecture) > 0 && fileTouchesArchitectureRules(path, rules) {
+			all = append(all, runArchitectureAI(engine, path, rules)...)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return all, nil
 }

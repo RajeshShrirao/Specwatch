@@ -1,9 +1,7 @@
 package analyzer
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,28 +10,37 @@ import (
 )
 
 // CheckForbidden patterns — regex on file content
-func CheckForbidden(path string, rules []spec.ForbiddenRule) []Violation {
+func CheckForbidden(path string, rules []spec.ForbiddenRule, cache *FileCache, compiled map[string]*regexp.Regexp) []Violation {
 	var violations []Violation
 
 	if len(rules) == 0 {
 		return violations
 	}
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
 	lineNum := 0
-	for scanner.Scan() {
+	for _, line := range content {
 		lineNum++
-		line := scanner.Text()
 
 		for _, rule := range rules {
 			if rule.Pattern != "" {
-				if strings.Contains(line, rule.Pattern) {
+				// Use pre-compiled pattern if available, otherwise fall back to strings.Contains
+				if re, ok := compiled[rule.Pattern]; ok {
+					if re.MatchString(line) {
+						violations = append(violations, Violation{
+							File:       path,
+							Line:       lineNum,
+							Rule:       "forbidden.pattern",
+							Severity:   spec.SeverityError,
+							Excerpt:    strings.TrimSpace(line),
+							Suggestion: rule.Message,
+						})
+					}
+				} else if strings.Contains(line, rule.Pattern) {
 					violations = append(violations, Violation{
 						File:       path,
 						Line:       lineNum,
@@ -71,9 +78,9 @@ func CheckNaming(path string, rules spec.NamingRules) []Violation {
 	ext := filepath.Ext(filename)
 	nameWithoutExt := strings.TrimSuffix(filename, ext)
 
-	// Check file naming (kebab-case)
+	// Check file naming using pre-compiled patterns
 	if rules.Files == "kebab-case" {
-		isKebab := regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(nameWithoutExt)
+		isKebab := GetKebabCasePattern().MatchString(nameWithoutExt)
 		// Relax for common special files like README.md or spec.md
 		if !isKebab && !strings.Contains(strings.ToLower(nameWithoutExt), "readme") && nameWithoutExt != "spec" {
 			violations = append(violations, Violation{
@@ -91,21 +98,19 @@ func CheckNaming(path string, rules spec.NamingRules) []Violation {
 }
 
 // CheckLimits: line count, import count
-func CheckLimits(path string, limits spec.LimitRules) []Violation {
+func CheckLimits(path string, limits spec.LimitRules, cache *FileCache) []Violation {
 	var violations []Violation
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
 	lineCount := 0
 	importCount := 0
-	for scanner.Scan() {
+	for _, line := range content {
 		lineCount++
-		line := strings.TrimSpace(scanner.Text())
+		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "import ") {
 			importCount++
 		}
