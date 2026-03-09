@@ -36,7 +36,7 @@ func (s *ForbiddenStrategy) Category() string {
 
 // CanCheck determines if this strategy can handle the given rule
 func (s *ForbiddenStrategy) CanCheck(rule interface{}) bool {
-	_, ok := rule.(spec.ForbiddenRule)
+	_, ok := rule.([]spec.ForbiddenRule)
 	return ok
 }
 

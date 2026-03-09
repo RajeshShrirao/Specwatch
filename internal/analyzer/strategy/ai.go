@@ -75,7 +75,7 @@ Code:
 
 Respond with a list of violations found, or "OK" if no violations.`, ruleDescription, strings.Join(content, "\n"))
 
-	result, err := params.LLMClient.Generate(ctx, prompt, "")
+	result, err := params.LLMClient.Generate(ctx, "", prompt)
 	if err != nil {
 		// Return empty on error - don't block other checks
 		return violations

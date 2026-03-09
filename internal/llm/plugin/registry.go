@@ -80,7 +80,7 @@ func (r *Registry) Len() int {
 	return len(r.plugins)
 }
 
-// Default default registry
+// Default registry
 var defaultRegistry = NewRegistry()
 
 // Register is a convenience function that registers to the default registry

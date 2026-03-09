@@ -1,6 +1,8 @@
 package common
 
 import (
+	"strconv"
+
 	"github.com/rajeshshrirao/specwatch/internal/analyzer"
 	"github.com/rajeshshrirao/specwatch/internal/spec"
 )
@@ -127,5 +129,5 @@ func ViolationFromArchitecture(file string, line int, rule spec.ArchitectureRule
 }
 
 func formatInt(i int) string {
-	return string(rune('0' + i%10))
+	return strconv.Itoa(i)
 }
