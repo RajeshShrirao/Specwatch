@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/github/go-mod/go-version/rajeshshrirao/specwatch?style=flat-square" alt="Go Version">
   <img src="https://img.shields.io/github/license/rajeshshrirao/specwatch?style=flat-square" alt="License">
   <img src="https://img.shields.io/github/actions/workflow/status/rajeshshrirao/specwatch/ci.yml?style=flat-square" alt="CI">
+  <img src="https://img.shields.io/badge/contributions-welcome-2DCC8F.svg?style=flat-square" alt="Contributions Welcome">
 </p>
 
 ---
