@@ -91,9 +91,10 @@ specwatch --version
 Control Specwatch behavior via `.specwatch.yml`.
 
 ```yaml
+llm.enabled: true
+
 # .specwatch.yml
 llm:
-  enabled: true
   provider: anthropic
   model: claude-haiku-4-5-20251002
   
@@ -126,7 +127,7 @@ specwatch login --provider anthropic --api-key YOUR_KEY
 - **OpenRouter**: 300+ models including Claude variants
 - **Google Gemini**: Gemini Flash, Pro models
 
-**AI Budget**: AI analysis fires at most once per 10 file saves to prevent excessive API costs.
+**AI Budget**: AI analysis fires at most once per 10 file saves, only for architecture-section rules, after static analysis passes.
 
 **Intelligence Profile:**
 - **Trigger**: Fires primarily on `## architecture` section rules.
