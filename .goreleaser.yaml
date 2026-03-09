@@ -13,21 +13,10 @@ archives:
       - LICENSE
       - README.md
       - spec.md
-    checksum:
-      algorithm: sha256
 
 release:
   draft: false
   prerelease: auto
-  name: "{{ .Tag }}"
-  header: |
-    ## What's Changed
-    
-    Full changelog: https://github.com/rajeshshrirao/specwatch/compare/{{ .PreviousTag }}...{{ .Tag }}
-
-github:
-  owner: rajeshshrirao
-  name: specwatch
 
 builds:
   - id: specwatch
