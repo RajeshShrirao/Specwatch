@@ -40,7 +40,35 @@ func NewWatcher(opt Options) (*Watcher, error) {
 
 func (w *Watcher) Watch(root string, onChange func(string)) error {
 	// Add root and all subdirectories to watcher
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := w.addTree(root)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-w.fsWatcher.Events:
+				if !ok {
+					return
+				}
+				if err := w.handleEvent(event, onChange); err != nil {
+					fmt.Printf("Watcher error: %v\n", err)
+				}
+			case err, ok := <-w.fsWatcher.Errors:
+				if !ok {
+					return
+				}
+				fmt.Printf("Watcher error: %v\n", err)
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (w *Watcher) addTree(root string) error {
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -53,55 +81,75 @@ func (w *Watcher) Watch(root string, onChange func(string)) error {
 		}
 		return nil
 	})
+}
 
-	if err != nil {
-		return err
+func (w *Watcher) handleEvent(event fsnotify.Event, onChange func(string)) error {
+	if isTemporaryFile(event.Name) {
+		return nil
 	}
 
-	go func() {
-		for {
-			select {
-			case event, ok := <-w.fsWatcher.Events:
-				if !ok {
-					return
-				}
-				// We only care about write events (file saves)
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					// Skip directories and temporary files
-					if info, err := os.Stat(event.Name); err == nil && !info.IsDir() {
-						// Filter by extensions if provided
-						if len(w.options.Extensions) > 0 {
-							ext := filepath.Ext(event.Name)
-							if ext != "" {
-								ext = ext[1:] // remove dot
-							}
-							found := false
-							for _, e := range w.options.Extensions {
-								if e == ext {
-									found = true
-									break
-								}
-							}
-							if !found {
-								continue
-							}
-						}
-
-						w.debouncer.Debounce(event.Name, func() {
-							onChange(event.Name)
-						})
-					}
-				}
-			case err, ok := <-w.fsWatcher.Errors:
-				if !ok {
-					return
-				}
-				fmt.Printf("Watcher error: %v\n", err)
-			}
+	info, err := os.Stat(event.Name)
+	if err == nil && info.IsDir() {
+		if event.Op&(fsnotify.Create|fsnotify.Rename) != 0 {
+			return w.addTree(event.Name)
 		}
-	}()
+		return nil
+	}
+
+	if event.Op&fsnotify.Remove == fsnotify.Remove {
+		if w.matchesExtension(event.Name) {
+			w.debouncer.Debounce(event.Name, func() {
+				onChange(event.Name)
+			})
+		}
+		return nil
+	}
+
+	if err != nil {
+		return nil
+	}
+
+	if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Chmod) == 0 {
+		return nil
+	}
+
+	if !w.matchesExtension(event.Name) {
+		return nil
+	}
+
+	w.debouncer.Debounce(event.Name, func() {
+		onChange(event.Name)
+	})
 
 	return nil
+}
+
+func (w *Watcher) matchesExtension(path string) bool {
+	if len(w.options.Extensions) == 0 {
+		return true
+	}
+
+	ext := filepath.Ext(path)
+	if ext != "" {
+		ext = ext[1:]
+	}
+
+	for _, candidate := range w.options.Extensions {
+		if strings.EqualFold(candidate, ext) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isTemporaryFile(path string) bool {
+	name := filepath.Base(path)
+	return strings.HasPrefix(name, ".") ||
+		strings.HasSuffix(name, "~") ||
+		strings.HasSuffix(name, ".swp") ||
+		strings.HasSuffix(name, ".swx") ||
+		strings.HasSuffix(name, ".tmp")
 }
 
 func (w *Watcher) Close() error {
