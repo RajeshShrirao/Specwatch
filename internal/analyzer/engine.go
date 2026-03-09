@@ -22,7 +22,7 @@ type Engine struct {
 func NewEngine(rules *spec.RuleSet) *Engine {
 	return &Engine{
 		Rules:      rules,
-		Extensions: []string{".ts", ".tsx", ".js", ".jsx"},
+		Extensions: []string{".go", ".ts", ".tsx", ".js", ".jsx"},
 	}
 }
 

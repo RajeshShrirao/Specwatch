@@ -34,8 +34,68 @@ var (
 			Width(monitorWidth)
 
 	StyleLogo = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#a371f7")).
+			Foreground(lipgloss.Color("#7ee787")).
 			Bold(true)
+
+	StyleBootBadge = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#0d1117")).
+			Background(lipgloss.Color("#7ee787")).
+			Bold(true).
+			Padding(0, 2)
+
+	StyleBootRail = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#58a6ff"))
+
+	StyleHero = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#c9d1d9")).
+			Bold(true)
+
+	StyleHeroHighlight = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#7ee787")).
+				Bold(true)
+
+	StyleHeroSubtle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#8b949e")).
+			Italic(true)
+
+	StyleLoadLabel = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7ee787")).
+			Bold(true)
+
+	StyleLoadMeta = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#58a6ff"))
+
+	StyleLoadBarFill = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#7ee787"))
+
+	StyleLoadBarEmpty = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#30363d"))
+
+	StyleLoadStepDone = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#8b949e"))
+
+	StyleLoadStepActive = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#58a6ff")).
+				Bold(true)
+
+	StyleShutdownLabel = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#7ee787")).
+				Bold(true)
+
+	StyleShutdownText = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#c9d1d9"))
+
+	StyleShutdownLine = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#58a6ff"))
+
+	StyleShutdownFade = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#30363d"))
+
+	StyleSummaryStat = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ColorBorderLight).
+				Padding(1, 2).
+				Foreground(ColorMuted)
 
 	StyleStatusDot = lipgloss.NewStyle().
 			Foreground(ColorSuccess)
@@ -62,6 +122,10 @@ var (
 
 	StyleActivityError = lipgloss.NewStyle().
 				Foreground(ColorError)
+
+	StyleActivityResolved = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#7ee787")).
+				Bold(true)
 
 	StyleActivityTime = lipgloss.NewStyle().
 				Foreground(ColorMuted).
@@ -112,6 +176,12 @@ var (
 				Bold(true).
 				PaddingLeft(1)
 
+	StyleHealthBadge = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#0d1117")).
+				Background(lipgloss.Color("#58a6ff")).
+				Bold(true).
+				Padding(0, 1)
+
 	// Detail Panel
 	StyleDetail = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
@@ -136,6 +206,20 @@ var (
 				Foreground(ColorSuccess).
 				Background(ColorSuccessBg).
 				Padding(0, 1)
+
+	StyleEmptyTitle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7ee787")).
+			Bold(true)
+
+	StyleEmptyMuted = lipgloss.NewStyle().
+			Foreground(ColorTextDim)
+
+	StyleCompactCard = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ColorBorderLight).
+				Background(ColorBgAlt).
+				Padding(1, 2).
+				MarginBottom(1)
 
 	// Footer
 	StyleFooter = lipgloss.NewStyle().
