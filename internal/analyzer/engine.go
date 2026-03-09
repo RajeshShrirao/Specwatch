@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	specerr "github.com/rajeshshrirao/specwatch/internal/errors"
 	"github.com/rajeshshrirao/specwatch/internal/llm"
 	"github.com/rajeshshrirao/specwatch/internal/spec"
 )
@@ -71,7 +72,7 @@ func (e *Engine) HasLLM() bool {
 // AnalyzeWithAI performs AI-powered analysis using the LLM
 func (e *Engine) AnalyzeWithAI(ctx context.Context, filePath, codeContent, ruleDescription string) ([]Violation, error) {
 	if e.LLMClient == nil {
-		return nil, fmt.Errorf("LLM client not configured")
+		return nil, specerr.New(specerr.ErrCodeNotFound, "LLM client not configured")
 	}
 
 	prompt := fmt.Sprintf(`You are a code analyzer. Check if the following code violates this architectural rule: %s
@@ -83,7 +84,7 @@ Respond with a list of violations found, or "OK" if no violations.`, ruleDescrip
 
 	result, err := e.LLMClient.Generate(ctx, prompt, "")
 	if err != nil {
-		return nil, fmt.Errorf("LLM generation failed: %w", err)
+		return nil, specerr.Wrap(err, specerr.ErrCodeNetwork, "LLM generation failed")
 	}
 
 	// Parse the LLM response - if it contains "OK", no violations
