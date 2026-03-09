@@ -97,14 +97,20 @@ var (
 			Bold(true).
 			PaddingLeft(1)
 
-	StyleStatError = StyleStatValue.Copy().
-			Foreground(ColorError)
+	StyleStatError = lipgloss.NewStyle().
+			Foreground(ColorError).
+			Bold(true).
+			PaddingLeft(1)
 
-	StyleStatWarning = StyleStatValue.Copy().
-				Foreground(ColorWarning)
+	StyleStatWarning = lipgloss.NewStyle().
+				Foreground(ColorWarning).
+				Bold(true).
+				PaddingLeft(1)
 
-	StyleStatSuccess = StyleStatValue.Copy().
-				Foreground(ColorSuccess)
+	StyleStatSuccess = lipgloss.NewStyle().
+				Foreground(ColorSuccess).
+				Bold(true).
+				PaddingLeft(1)
 
 	// Detail Panel
 	StyleDetail = lipgloss.NewStyle().
