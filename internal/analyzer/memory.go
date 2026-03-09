@@ -65,8 +65,9 @@ func GetBuffer() []byte {
 func PutBuffer(buf []byte) {
 	// Only return if it has some capacity (avoid returning empty slices)
 	if cap(buf) > 0 {
-		buf = buf[:0] // Reset length but keep capacity
-		BufferPool.Put(buf)
+		// Create a new buffer from scratch to avoid pointer issues
+		newBuf := make([]byte, 0, cap(buf))
+		BufferPool.Put(newBuf)
 	}
 }
 
@@ -151,15 +152,6 @@ func (m *MemoryMonitor) IsOverLimit() bool {
 // ForceGC forces garbage collection
 func (m *MemoryMonitor) ForceGC() {
 	runtime.GC()
-}
-
-// sliceWithCapacity creates a slice with initial capacity to avoid reallocations
-func sliceWithCapacity[T any](size, cap int) []T {
-	if cap <= 0 {
-		cap = size
-	}
-	s := make([]T, 0, cap)
-	return s[:size]
 }
 
 // ViolationSlice is a pre-allocated slice for violations
