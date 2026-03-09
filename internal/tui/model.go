@@ -3,11 +3,14 @@ package tui
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rajeshshrirao/specwatch/internal/analyzer"
+	"github.com/rajeshshrirao/specwatch/internal/spec"
 )
 
 type ActivityItem struct {
@@ -16,18 +19,23 @@ type ActivityItem struct {
 	Timestamp time.Time
 }
 
-type Model struct {
-	Activity   []ActivityItem
-	Violations []analyzer.Violation
-	TotalFiles int
-	ErrorCount int
-	WarnCount  int
+type InternalViolation struct {
+	analyzer.Violation
+	Timestamp time.Time
+}
 
+type Model struct {
+	Activity    []ActivityItem
+	Violations  []InternalViolation
+	TotalFiles  int
+	ErrorCount  int
+	WarnCount   int
+	Latency     string
+	ShowDetail  bool
 	Cursor      int
 	Width       int
 	Height      int
 	Analyzing   bool
-	LastResults string
 }
 
 type NewViolationMsg struct {
@@ -39,7 +47,7 @@ type NewViolationMsg struct {
 func InitialModel() Model {
 	return Model{
 		Activity:   []ActivityItem{},
-		Violations: []analyzer.Violation{},
+		Violations: []InternalViolation{},
 	}
 }
 
@@ -67,135 +75,215 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Cursor++
 			}
 		case "c":
-			m.Violations = []analyzer.Violation{}
+			m.Violations = []InternalViolation{}
 			m.ErrorCount = 0
+			m.WarnCount = 1 // Just kidding, 0
 			m.WarnCount = 0
 			m.Cursor = 0
+		case "enter":
+			if len(m.Violations) > 0 {
+				m.ShowDetail = !m.ShowDetail
+			}
 		}
 
 	case NewViolationMsg:
+		now := time.Now()
 		// Update Activity
 		m.Activity = append([]ActivityItem{{
 			File:      msg.File,
 			Clean:     len(msg.Violations) == 0,
-			Timestamp: time.Now(),
+			Timestamp: now,
 		}}, m.Activity...)
-		if len(m.Activity) > 20 {
-			m.Activity = m.Activity[:20]
+		if len(m.Activity) > 50 {
+			m.Activity = m.Activity[:50]
 		}
 
-		// Update Violations (remove old ones for this file, add new ones)
-		var newViolations []analyzer.Violation
+		// Update Violations
+		var updatedViolations []InternalViolation
 		for _, v := range m.Violations {
 			if v.File != msg.File {
-				newViolations = append(newViolations, v)
+				updatedViolations = append(updatedViolations, v)
 			}
 		}
-		newViolations = append(newViolations, msg.Violations...)
-		m.Violations = newViolations
+		for _, v := range msg.Violations {
+			updatedViolations = append(updatedViolations, InternalViolation{
+				Violation: v,
+				Timestamp: now,
+			})
+		}
+		
+		// Sort: Severity (Error > Warning), then Recency (Newest first)
+		sort.Slice(updatedViolations, func(i, j int) bool {
+			if updatedViolations[i].Severity != updatedViolations[j].Severity {
+				return updatedViolations[i].Severity == spec.SeverityError
+			}
+			return updatedViolations[i].Timestamp.After(updatedViolations[j].Timestamp)
+		})
+		m.Violations = updatedViolations
 
-		// Update Stats
+		// Stats
 		m.ErrorCount = 0
 		m.WarnCount = 0
 		uniqueFiles := make(map[string]bool)
 		for _, v := range m.Violations {
-			if strings.Contains(string(v.Severity), "error") {
+			if v.Severity == spec.SeverityError {
 				m.ErrorCount++
 			} else {
 				m.WarnCount++
 			}
 			uniqueFiles[v.File] = true
 		}
-
-		// This is a bit simplistic, we'd want a more robust way to track TotalFiles
-		// For now let's just count unique files with violations + clean files we've seen
+		
 		seenFiles := make(map[string]bool)
 		for _, a := range m.Activity {
 			seenFiles[a.File] = true
 		}
 		m.TotalFiles = len(seenFiles)
-
-		m.LastResults = msg.Duration.String()
+		m.Latency = fmt.Sprintf("%dms", msg.Duration.Milliseconds())
 	}
 
 	return m, nil
 }
 
 func (m Model) View() string {
-	var sb strings.Builder
+	if m.Width == 0 || m.Height == 0 {
+		return "Initializing..."
+	}
 
-	// Title bar
-	title := fmt.Sprintf(" specwatch v0.1.0 %s ", getStatusIndicator(m.Analyzing))
-	sb.WriteString(StyleTitle.Render(title))
-	sb.WriteString("\n\n")
+	// Calculate dimensions
+	footerHeight := 1
+	detailHeight := 0
+	if m.ShowDetail {
+		detailHeight = 8 // Fixed height for detail bar
+	}
+	
+	mainHeight := m.Height - footerHeight - detailHeight - 2 // -2 for title/spacing?
+	if mainHeight < 0 { mainHeight = 0 }
 
-	// Activity column
-	sb.WriteString(StyleHeader.Render("ACTIVITY"))
-	sb.WriteString("\n")
-	for i, item := range m.Activity {
-		marker := "○ "
-		style := StyleFileClean
+	leftWidth := int(float64(m.Width) * 0.3)
+	rightWidth := int(float64(m.Width) * 0.2)
+	centerWidth := m.Width - leftWidth - rightWidth
+
+	// Styles with dynamic widths
+	leftStyle := StylePanel.Copy().Width(leftWidth - 2).Height(mainHeight)
+	centerStyle := StylePanelActive.Copy().Width(centerWidth - 2).Height(mainHeight)
+	rightStyle := StylePanel.Copy().Width(rightWidth - 2).Height(mainHeight)
+
+	// --- Left Panel: Activity Feed ---
+	var activityLines []string
+	activityLines = append(activityLines, StyleTitle.Render("ACTIVITY"))
+	
+	// Slice activity to fit mainHeight
+	maxActivity := mainHeight - 2
+	visibleActivity := m.Activity
+	if len(visibleActivity) > maxActivity {
+		visibleActivity = visibleActivity[:maxActivity]
+	}
+
+	for _, item := range visibleActivity {
+		dot := StyleSuccess.Render("●")
 		if !item.Clean {
-			marker = "● "
-			style = StyleFileViolation
-		}
-		cursor := " "
-		if i == m.Cursor && len(m.Violations) > 0 {
-			cursor = ">"
+			dot = StyleError.Render("●")
 		}
 		filename := filepath.Base(item.File)
-		age := time.Since(item.Timestamp).Round(time.Second)
-		sb.WriteString(fmt.Sprintf("%s%s%s %s\n", cursor, style.Render(marker), filename, StyleTime.Render(age.String())))
+		elapsed := time.Since(item.Timestamp).Round(time.Second).String()
+		line := fmt.Sprintf("%s %s %s", dot, filename, StyleMuted.Render(elapsed))
+		activityLines = append(activityLines, line)
 	}
+	leftView := leftStyle.Render(strings.Join(activityLines, "\n"))
 
-	// Violations column
-	sb.WriteString("\n" + StyleHeader.Render("VIOLATIONS"))
-	sb.WriteString("\n")
+	// --- Center Panel: Violations ---
+	var violationLines []string
+	violationLines = append(violationLines, StyleTitle.Render("VIOLATIONS"))
 	if len(m.Violations) == 0 {
-		sb.WriteString(StyleTime.Render("No violations"))
+		violationLines = append(violationLines, StyleMuted.Render("No violations detected"))
 	} else {
-		for i, v := range m.Violations {
-			cursor := " "
+		// Calculate viewport for violations
+		maxViolations := mainHeight - 2
+		start := 0
+		if m.Cursor >= maxViolations {
+			start = m.Cursor - maxViolations + 1
+		}
+		end := start + maxViolations
+		if end > len(m.Violations) {
+			end = len(m.Violations)
+		}
+
+		for i := start; i < end; i++ {
+			v := m.Violations[i]
+			prefix := "  "
+			style := StyleViolationItem
 			if i == m.Cursor {
-				cursor = StyleViolationItem.Render("✗ ")
-			} else {
-				cursor = "  "
+				prefix = StyleAccent.Render("→ ")
+				style = StyleViolationSelected.Copy().Width(centerWidth - 6)
 			}
-			filename := filepath.Base(v.File)
-			ruleName := strings.Split(v.Rule, ".")[0]
-			sb.WriteString(fmt.Sprintf("%s%s:%d %s\n", cursor, filename, v.Line, StyleRule.Render(ruleName)))
+			
+			loc := fmt.Sprintf("%s:%d", filepath.Base(v.File), v.Line)
+			rule := v.Rule
+			if len(rule) > 20 { rule = rule[:17] + "..." }
+			
+			line := style.Render(fmt.Sprintf("%s%s %s", prefix, loc, StyleMuted.Render(rule)))
+			violationLines = append(violationLines, line)
 		}
 	}
+	centerView := centerStyle.Render(strings.Join(violationLines, "\n"))
 
-	// Stats column
-	sb.WriteString("\n" + StyleHeader.Render("STATS"))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("%s %d files\n", StyleFileClean.Render("✓"), m.TotalFiles))
-	sb.WriteString(fmt.Sprintf("%s %d errors\n", StyleFileViolation.Render("✗"), m.ErrorCount))
-	sb.WriteString(fmt.Sprintf("%s %d warnings\n", StyleTime.Render("⚠"), m.WarnCount))
+	// --- Right Panel: Stats ---
+	var statLines []string
+	statLines = append(statLines, StyleTitle.Render("STATS"))
+	statLines = append(statLines, "", "Files watched")
+	statLines = append(statLines, StyleStatValue.Render(fmt.Sprintf("%d", m.TotalFiles)), "")
+	statLines = append(statLines, "Errors")
+	statLines = append(statLines, StyleError.Copy().Inherit(StyleStatValue).Render(fmt.Sprintf("%d", m.ErrorCount)), "")
+	statLines = append(statLines, "Warnings")
+	statLines = append(statLines, StyleWarning.Copy().Inherit(StyleStatValue).Render(fmt.Sprintf("%d", m.WarnCount)))
+	rightView := rightStyle.Render(strings.Join(statLines, "\n"))
 
-	// Detail panel at bottom
-	if m.Cursor < len(m.Violations) {
+	// --- Bottom Detail Bar ---
+	detailView := ""
+	if m.ShowDetail && len(m.Violations) > 0 {
 		v := m.Violations[m.Cursor]
-		sb.WriteString("\n")
-		sb.WriteString(StyleDetail.Render(
-			fmt.Sprintf("%s %s:%d [%s]", StyleFileViolation.Render("✗"), filepath.Base(v.File), v.Line, v.Rule),
-		))
-		sb.WriteString("\n")
-		sb.WriteString(fmt.Sprintf("Found:    %s\n", v.Excerpt))
-		sb.WriteString(fmt.Sprintf("Fix:      %s\n", v.Suggestion))
+		detailStyle := StylePanel.Copy().Width(m.Width - 2).Height(detailHeight - 2)
+		
+		content := fmt.Sprintf(
+			"%s %s\n%s %s\n%s %s\n%s %s\n%s %s",
+			StyleDetailKey.Render("File"), StyleDetailValue.Render(v.File),
+			StyleDetailKey.Render("Line"), StyleDetailValue.Render(fmt.Sprintf("%d", v.Line)),
+			StyleDetailKey.Render("Category"), StyleDetailValue.Render(v.Rule),
+			StyleDetailKey.Render("Snippet"), StyleDetailValue.Render(v.Excerpt),
+			StyleDetailKey.Render("Fix"), StyleAccent.Render(v.Suggestion),
+		)
+		detailView = detailStyle.Render(content)
 	}
 
-	// Footer with timing
-	sb.WriteString("\n")
-	sb.WriteString(StyleTime.Render(m.LastResults + " "))
+	// --- Footer ---
+	footerLeft := fmt.Sprintf(
+		"%s %s %s %s %s %s %s %s",
+		StyleFooterKey.Render("[j/k]"), StyleFooterHint.Render("Navigate"),
+		StyleFooterKey.Render("[enter]"), StyleFooterHint.Render("Details"),
+		StyleFooterKey.Render("[c]"), StyleFooterHint.Render("Clear"),
+		StyleFooterKey.Render("[q]"), StyleFooterHint.Render("Quit"),
+	)
+	footerRight := StyleLatency.Render(m.Latency)
+	footer := lipgloss.JoinHorizontal(lipgloss.Bottom,
+		footerLeft,
+		strings.Repeat(" ", max(0, m.Width-lipgloss.Width(footerLeft)-lipgloss.Width(footerRight))),
+		footerRight,
+	)
 
-	return sb.String()
+	// Combine everything
+	mainPanels := lipgloss.JoinHorizontal(lipgloss.Top, leftView, centerView, rightView)
+	
+	finalView := lipgloss.JoinVertical(lipgloss.Left,
+		mainPanels,
+		detailView,
+		footer,
+	)
+
+	return StyleMain.Render(finalView)
 }
 
-func getStatusIndicator(analyzing bool) string {
-	if analyzing {
-		return "● watching"
-	}
-	return "○ idle"
+func max(a, b int) int {
+	if a > b { return a }
+	return b
 }

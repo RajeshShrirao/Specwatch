@@ -32,7 +32,6 @@ func CheckForbidden(path string, rules []spec.ForbiddenRule) []Violation {
 		line := scanner.Text()
 
 		for _, rule := range rules {
-			fmt.Printf("DEBUG: checking rule %+v against line %d: %s\n", rule, lineNum, line)
 			if rule.Pattern != "" {
 				if strings.Contains(line, rule.Pattern) {
 					violations = append(violations, Violation{

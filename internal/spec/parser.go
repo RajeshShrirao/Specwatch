@@ -53,7 +53,6 @@ func Parse(path string) (*RuleSet, error) {
 }
 
 func parseSection(rules *RuleSet, title string, list *ast.List, source []byte) {
-	fmt.Printf("DEBUG parseSection: title=%q, list has %d children\n", title, list.ChildCount())
 	switch title {
 	case "stack":
 		rules.Stack = parseStack(list, source)
@@ -142,35 +141,16 @@ func parseNaming(list *ast.List, source []byte) NamingRules {
 
 func parseForbidden(list *ast.List, source []byte) []ForbiddenRule {
 	var rules []ForbiddenRule
-	fmt.Printf("DEBUG parseForbidden: list=%p, FirstChild=%p\n", list, list.FirstChild())
 	for item := list.FirstChild(); item != nil; item = item.NextSibling() {
-		fmt.Printf("DEBUG parseForbidden: item type=%T\n", item)
-		// Get all text from the list item and its children (including paragraphs)
+		// Get all text from the list item - TextBlock contains the text
 		var fullText strings.Builder
 
-		// First try direct text
-		if item.FirstChild() != nil {
-			fmt.Printf("DEBUG parseForbidden: item.FirstChild type=%T\n", item.FirstChild())
-			if textNode, ok := item.FirstChild().(*ast.Text); ok {
-				fullText.Write(textNode.Text(source))
-			}
-		}
-
-		// Also check for paragraph children
-		for node := item.FirstChild(); node != nil; node = node.NextSibling() {
-			fmt.Printf("DEBUG parseForbidden: node type=%T\n", node)
-			if para, ok := node.(*ast.Paragraph); ok {
-				for pnode := para.FirstChild(); pnode != nil; pnode = pnode.NextSibling() {
-					if textNode, ok := pnode.(*ast.Text); ok {
-						fullText.Write(textNode.Text(source))
-						fullText.WriteString(" ")
-					}
-				}
-			}
+		// TextBlock is the container, we need to get text from it
+		if textBlock, ok := item.FirstChild().(*ast.TextBlock); ok {
+			fullText.WriteString(string(textBlock.Text(source)))
 		}
 
 		line := strings.TrimSpace(fullText.String())
-		fmt.Printf("DEBUG parseForbidden: line = %q\n", line)
 
 		// First split by pattern or import
 		parts := strings.SplitN(line, ":", 2)
@@ -200,7 +180,6 @@ func parseForbidden(list *ast.List, source []byte) []ForbiddenRule {
 				rule.Import = strings.Trim(ruleVal, "\"")
 			}
 			rule.Message = message
-			fmt.Printf("DEBUG parseForbidden: rule=%+v\n", rule)
 
 			if rule.Pattern != "" || rule.Import != "" {
 				rules = append(rules, rule)

@@ -8,10 +8,9 @@ import (
 )
 
 var (
-	version   = "dev"
-	commit    = "unknown"
-	date      = "unknown"
-	versionOk bool
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
 )
 
 var rootCmd = &cobra.Command{

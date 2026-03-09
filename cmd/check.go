@@ -42,7 +42,10 @@ var checkCmd = &cobra.Command{
 		duration := time.Since(start)
 
 		if format == "" {
-			reporter.ConsoleOutput(violations, duration.Milliseconds())
+			if err := reporter.ConsoleOutput(violations, duration.Milliseconds()); err != nil {
+				fmt.Fprintf(os.Stderr, "Error outputting results: %v\n", err)
+				os.Exit(1)
+			}
 		} else {
 			err := reporter.GenerateReport(violations, duration.Milliseconds(), format, os.Stdout)
 			if err != nil {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rajeshshrirao/specwatch/internal/analyzer"
@@ -10,6 +11,12 @@ import (
 	"github.com/rajeshshrirao/specwatch/internal/tui"
 	"github.com/rajeshshrirao/specwatch/internal/watcher"
 	"github.com/spf13/cobra"
+)
+
+var (
+	extensions []string
+	debounce   int
+	skip       []string
 )
 
 var watchCmd = &cobra.Command{
@@ -35,32 +42,43 @@ var watchCmd = &cobra.Command{
 		}
 
 		engine := analyzer.NewEngine(rules)
+		engine.SkipCategories = skip
 
-		watcher, err := watcher.NewWatcher()
+		w, err := watcher.NewWatcher(watcher.Options{
+			Debounce:   time.Duration(debounce) * time.Millisecond,
+			Extensions: extensions,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating watcher: %v\n", err)
 			os.Exit(1)
 		}
-		defer watcher.Close()
+		defer w.Close()
 
-		model := tui.InitialModel()
+		p := tea.NewProgram(tui.InitialModel())
 
-		watcher.Watch(path, func(file string) {
+		if err := w.Watch(path, func(file string) {
 			violations, duration := engine.Analyze(file)
-			newModel, _ := model.Update(tui.NewViolationMsg{
+			p.Send(tui.NewViolationMsg{
 				File:       file,
 				Violations: violations,
 				Duration:   duration,
 			})
-			model = newModel.(tui.Model)
-		})
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error starting watcher: %v\n", err)
+			os.Exit(1)
+		}
 
-		p := tea.NewProgram(model)
-		if err := p.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error starting TUI: %v\n", err)
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 			os.Exit(1)
 		}
 
 		return nil
 	},
+}
+
+func init() {
+	watchCmd.Flags().StringSliceVarP(&extensions, "ext", "e", []string{"ts", "tsx", "go"}, "Watch specific extensions")
+	watchCmd.Flags().IntVarP(&debounce, "debounce", "d", 800, "Debounce time in milliseconds")
+	watchCmd.Flags().StringSliceVarP(&skip, "skip", "s", []string{}, "Skip rule categories")
 }

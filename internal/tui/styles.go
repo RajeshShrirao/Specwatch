@@ -4,62 +4,75 @@ import "github.com/charmbracelet/lipgloss"
 
 var (
 	// Colors
-	ColorPrimary   = lipgloss.Color("#7D56F4")
-	ColorSecondary = lipgloss.Color("#25a065")
-	ColorError     = lipgloss.Color("#E84855")
-	ColorWarning   = lipgloss.Color("#FF9B54")
-	ColorGrey      = lipgloss.Color("#5A5A5A")
-	ColorBg        = lipgloss.Color("#1A1A1A")
-	ColorSubtle    = lipgloss.Color("#333333")
+	ColorBg      = lipgloss.Color("#0a0a0a")
+	ColorBorder  = lipgloss.Color("#222222")
+	ColorError   = lipgloss.Color("#F75F4F")
+	ColorWarning = lipgloss.Color("#F7A94F")
+	ColorSuccess = lipgloss.Color("#2DCC8F")
+	ColorMuted   = lipgloss.Color("#555555")
+	ColorAccent  = lipgloss.Color("#4F8EF7")
 
-	// Styles
-	StyleTitle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(ColorPrimary).
+	// Base Styles
+	StyleMain = lipgloss.NewStyle().
+			Background(ColorBg).
+			Foreground(lipgloss.Color("#FAFAFA"))
+
+	StylePanel = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorBorder).
 			Padding(0, 1)
 
-	StyleHeader = lipgloss.NewStyle().
+	StylePanelActive = StylePanel.Copy().
+				BorderForeground(ColorAccent)
+
+	StyleTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(ColorPrimary).
+			Foreground(ColorAccent).
 			MarginBottom(1)
 
-	StyleFileClean = lipgloss.NewStyle().
-			Foreground(ColorSecondary)
+	StyleMuted = lipgloss.NewStyle().
+			Foreground(ColorMuted)
 
-	StyleFileViolation = lipgloss.NewStyle().
-				Foreground(ColorError)
+	StyleError = lipgloss.NewStyle().
+			Foreground(ColorError)
+
+	StyleWarning = lipgloss.NewStyle().
+			Foreground(ColorWarning)
+
+	StyleSuccess = lipgloss.NewStyle().
+			Foreground(ColorSuccess)
+
+	StyleAccent = lipgloss.NewStyle().
+			Foreground(ColorAccent)
+
+	// Panel Specifics
+	StyleActivityItem = lipgloss.NewStyle().
+				Height(1)
 
 	StyleViolationItem = lipgloss.NewStyle().
-				PaddingLeft(2)
+				PaddingLeft(1)
 
-	StyleStats = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder(), false, false, false, true).
-			BorderForeground(ColorSubtle).
-			PaddingLeft(2)
+	StyleViolationSelected = lipgloss.NewStyle().
+				Background(lipgloss.Color("#1a1a1a")).
+				Foreground(lipgloss.Color("#ffffff"))
 
-	StyleDetail = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder(), true, false, false, false).
-			BorderForeground(ColorSubtle).
-			Padding(1, 0).
-			MarginTop(1)
+	StyleStatValue = lipgloss.NewStyle().
+			Bold(true)
 
-	StyleBox = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(ColorSubtle).
-			Padding(1, 2)
+	StyleDetailKey = lipgloss.NewStyle().
+			Foreground(ColorMuted).
+			Width(15)
 
-	StyleStatusWatching = lipgloss.NewStyle().
-				Foreground(ColorSecondary).
-				Bold(true)
+	StyleDetailValue = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FAFAFA"))
 
-	StyleTime = lipgloss.NewStyle().
-			Foreground(ColorGrey)
+	StyleFooterHint = lipgloss.NewStyle().
+			Foreground(ColorMuted)
 
-	StyleLineNum = lipgloss.NewStyle().
-			Foreground(ColorGrey)
+	StyleFooterKey = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FAFAFA"))
 
-	StyleRule = lipgloss.NewStyle().
-			Foreground(ColorPrimary).
+	StyleLatency = lipgloss.NewStyle().
+			Foreground(ColorMuted).
 			Italic(true)
 )

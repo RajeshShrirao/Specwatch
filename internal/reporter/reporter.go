@@ -64,7 +64,7 @@ func GenerateReport(violations []analyzer.Violation, durationMs int64, format st
 		}
 		tw.Flush()
 
-		fmt.Fprintf(writer.(interface{ Write([]byte) (int, error) }), "\nSummary: %d files checked, %d errors, %d warnings, %dms\n",
+		fmt.Fprintf(writer, "\nSummary: %d files checked, %d errors, %d warnings, %dms\n",
 			result.Summary.FilesChecked, result.Summary.Errors, result.Summary.Warnings, result.Summary.DurationMs)
 		return nil
 
