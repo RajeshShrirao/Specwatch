@@ -3,15 +3,46 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/rajeshshrirao/specwatch/internal/llm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
 	version = "dev"
 	commit  = "unknown"
 	date    = "unknown"
+
+	appConfig = runtimeConfig{
+		LLM: llmConfig{
+			Provider: string(llm.ProviderAnthropic),
+			Model:    llm.DefaultModels[llm.ProviderAnthropic],
+		},
+		Watch: watchConfig{
+			Debounce:   800,
+			Extensions: []string{"ts", "tsx", "go"},
+		},
+	}
 )
+
+type runtimeConfig struct {
+	LLM   llmConfig
+	Watch watchConfig
+}
+
+type llmConfig struct {
+	Enabled  bool
+	Provider string
+	Model    string
+}
+
+type watchConfig struct {
+	Debounce   int
+	Extensions []string
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "specwatch",
@@ -50,4 +81,55 @@ func findSpecFile() string {
 		}
 	}
 	return ""
+}
+
+func loadRuntimeConfig(specPath string) error {
+	appConfig = runtimeConfig{
+		LLM: llmConfig{
+			Provider: string(llm.ProviderAnthropic),
+			Model:    llm.DefaultModels[llm.ProviderAnthropic],
+		},
+		Watch: watchConfig{
+			Debounce:   800,
+			Extensions: []string{"ts", "tsx", "go"},
+		},
+	}
+
+	configPath := filepath.Join(filepath.Dir(specPath), ".specwatch.yml")
+	if _, err := os.Stat(configPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	cfg := viper.New()
+	cfg.SetConfigFile(configPath)
+	cfg.SetConfigType("yaml")
+
+	if err := cfg.ReadInConfig(); err != nil {
+		return err
+	}
+
+	appConfig.LLM.Enabled = cfg.GetBool("llm.enabled")
+
+	provider := strings.TrimSpace(cfg.GetString("llm.provider"))
+	if provider != "" {
+		appConfig.LLM.Provider = strings.ToLower(provider)
+	}
+
+	model := strings.TrimSpace(cfg.GetString("llm.model"))
+	if model != "" {
+		appConfig.LLM.Model = model
+	}
+
+	if cfg.IsSet("watch.debounce") {
+		appConfig.Watch.Debounce = cfg.GetInt("watch.debounce")
+	}
+
+	if cfg.IsSet("watch.extensions") {
+		appConfig.Watch.Extensions = cfg.GetStringSlice("watch.extensions")
+	}
+
+	return nil
 }
