@@ -1,7 +1,6 @@
 package analyzer
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,8 +26,6 @@ func (e *Engine) Analyze(path string) ([]Violation, time.Duration) {
 	if ext != ".ts" && ext != ".tsx" && ext != ".js" && ext != ".jsx" {
 		return violations, time.Since(start)
 	}
-
-	fmt.Printf("DEBUG Engine: Analyzing %s with %d forbidden rules\n", path, len(e.Rules.Forbidden))
 
 	// Check forbidden patterns
 	if len(e.Rules.Forbidden) > 0 {
