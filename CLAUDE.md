@@ -154,9 +154,9 @@ if err != nil {
 6. Upload coverage
 
 ### Environment Variables
-- `ANTHROPIC_API_KEY`: Anthropic API key for AI-powered checks
-- `OPENROUTER_API_KEY`: OpenRouter API key (alternative to Anthropic)
-- `GEMINI_API_KEY`: Google Gemini API key
+- `ANTHROPIC_API_KEY`: Anthropic API key (default model: claude-haiku-4-5-20251002)
+- `OPENROUTER_API_KEY`: OpenRouter API key (default model: anthropic/claude-4.5-haiku-20250929)
+- `GEMINI_API_KEY`: Google Gemini API key (default model: gemini-2.0-flash)
 - `CI`: Set to true in CI environment
 
 ## Documentation

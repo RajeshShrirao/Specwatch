@@ -7,21 +7,18 @@ Specwatch now has **AI-powered code analysis**! Instead of just checking if your
 ## Features
 
 ### 1. Multiple AI Providers
-You can choose from three different AI services:
 
-| Provider | Best For | Example Model |
-|----------|----------|---------------|
-| **Anthropic (Claude)** | Fast, cost-effective AI checks | Haiku 4.5 |
-| **OpenRouter** | Access to 300+ AI models | Claude via OpenRouter |
-| **Google Gemini** | Google's AI models | Gemini 2.0 Flash |
+| Provider | Default Model | Description |
+|----------|--------------|-------------|
+| **Anthropic (Claude)** | claude-haiku-4-5-20251002 | Fast, cost-effective |
+| **OpenRouter** | anthropic/claude-4.5-haiku-20250929 | 300+ AI models |
+| **Google Gemini** | gemini-2.0-flash | Google's fastest model |
 
 ### 2. Dynamic Model Listing
 Want to see all available models? Just run:
 ```bash
 specwatch login --provider openrouter --list-models
 ```
-
-This shows every model you can use, including pricing and context limits.
 
 ### 3. Easy Authentication
 No more hunting for API keys! Just run:
@@ -33,6 +30,10 @@ specwatch login --provider anthropic --api-key sk-ant-your-key-here
 # Or use environment variables
 export ANTHROPIC_API_KEY="sk-ant-your-key-here"
 ```
+
+## ⚠️ Important: AI Budget Constraint
+
+**AI analysis fires at most once per 10 file saves**, and only when architecture rules require semantic judgment. This prevents excessive API costs and keeps development fast.
 
 ## User Flows
 
@@ -66,14 +67,14 @@ export ANTHROPIC_API_KEY="sk-ant-your-key-here"
 ### Flow 3: Switching Providers
 
 ```
-# Using Anthropic
+# Using Anthropic (default model: claude-haiku-4-5-20251002)
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Switch to OpenRouter (alternative)
+# Switch to OpenRouter (default model: anthropic/claude-4.5-haiku-20250929)
 unset ANTHROPIC_API_KEY
 export OPENROUTER_API_KEY="sk-or-v1-..."
 
-# Switch to Gemini
+# Switch to Gemini (default model: gemini-2.0-flash)
 unset OPENROUTER_API_KEY  
 export GEMINI_API_KEY="AIza..."
 ```
@@ -90,6 +91,8 @@ With AI (New!):
 - Detects business logic in UI components
 - Identifies design pattern violations
 - Explains WHY something is wrong
+
+**Budget**: AI analysis runs at most once per 10 file saves to prevent excessive API costs.
 
 Example in `spec.md`:
 ```markdown
@@ -128,11 +131,11 @@ llm:
 | `specwatch login --provider X --list-models` | See all models for X |
 | `specwatch login --provider X --api-key KEY` | Set API key inline |
 
-| Environment Variable | Provider |
-|---------------------|----------|
-| `ANTHROPIC_API_KEY` | Anthropic |
-| `OPENROUTER_API_KEY` | OpenRouter |
-| `GEMINI_API_KEY` | Google Gemini |
+| Environment Variable | Default Model | Provider |
+|---------------------|--------------|----------|
+| `ANTHROPIC_API_KEY` | claude-haiku-4-5-20251002 | Anthropic |
+| `OPENROUTER_API_KEY` | anthropic/claude-4.5-haiku-20250929 | OpenRouter |
+| `GEMINI_API_KEY` | gemini-2.0-flash | Google Gemini |
 
 ## Benefits
 
@@ -140,3 +143,4 @@ llm:
 2. **Better Feedback** - Gets explanations, not just "error"
 3. **Flexible** - Choose provider based on cost/speed needs
 4. **Future-Ready** - Easy to switch models as AI improves
+5. **Budget-Aware** - Runs max once per 10 saves to control costs

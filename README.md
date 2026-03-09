@@ -108,13 +108,13 @@ watch:
 For AI-powered checks, configure your provider API key:
 
 ```bash
-# Using Anthropic (default)
+# Using Anthropic (default: claude-haiku-4-5-20251002)
 export ANTHROPIC_API_KEY="your-key-here"
 
-# Using OpenRouter (alternative)
+# Using OpenRouter (default: anthropic/claude-4.5-haiku-20250929)
 export OPENROUTER_API_KEY="your-key-here"
 
-# Using Google Gemini
+# Using Google Gemini (default: gemini-2.0-flash)
 export GEMINI_API_KEY="your-key-here"
 
 # Or use the login command
@@ -125,6 +125,8 @@ specwatch login --provider anthropic --api-key YOUR_KEY
 - **Anthropic**: Claude Haiku 4.5, Sonnet, Opus
 - **OpenRouter**: 300+ models including Claude variants
 - **Google Gemini**: Gemini Flash, Pro models
+
+**AI Budget**: AI analysis fires at most once per 10 file saves to prevent excessive API costs.
 
 **Intelligence Profile:**
 - **Trigger**: Fires primarily on `## architecture` section rules.

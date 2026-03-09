@@ -40,36 +40,96 @@ This creates a `spec.md` file where you define your rules.
 
 ### The spec.md File
 
-This is your **architectural blueprint**. Example:
+This is your **architectural blueprint**. You MUST use the exact syntax below or rules won't be detected.
+
+#### Required Syntax (Copy This!)
 
 ```markdown
 # My Project Spec
 
-## naming
-- Components must use PascalCase
-- Hooks must start with "use"
+## stack
+- language: typescript
+- framework: react
+- styling: tailwind
 
-## limits
-- Max 200 lines per file
-- Max 10 imports per file
+## structure
+- pages: src/pages/*
+- components: src/components/*
+- hooks: src/hooks/*
+
+## naming
+- components: PascalCase
+- files: kebab-case
+- hooks: use*
 
 ## forbidden
-- No console.log statements
-- No TODO comments
+- pattern: "console.log" message: Use the logger from lib/logger instead
+- import: "lib/db" message: Use the service layer instead
+
+## required
+- async: try-catch
+
+## limits
+- max file lines: 200
+- max imports per file: 10
 
 ## architecture
-- UI components must not contain business logic
+- No business logic in UI components
 - API calls must go through service layer
 ```
 
-### How Analysis Works
+⚠️ **Important**: The format above is REQUIRED. Do NOT use freeform text. Each rule type has a specific syntax.
 
+---
+
+## Rule Syntax Reference
+
+### `## stack`
 ```
-Your Code → Specwatch → Violations Report
-                ↓
-           spec.md rules
-                ↓
-        [Static] + [AI] checks
+- language: typescript
+- framework: react
+- runtime: node
+```
+
+### `## structure`
+```
+- components: src/components/*
+- hooks: src/hooks/*
+```
+
+### `## naming`
+```
+- components: PascalCase
+- files: kebab-case
+- functions: camelCase
+- constants: UPPER_SNAKE_CASE
+```
+
+### `## forbidden` (MUST use this exact format)
+```
+- pattern: "console.log" message: Use logger instead
+- pattern: "debugger" message: Remove debugger statement
+- import: "lib/db" message: Use service layer
+```
+
+### `## required`
+```
+- async: try-catch
+- exports: default
+```
+
+### `## limits` (MUST use this exact format)
+```
+- max file lines: 200
+- max imports per file: 10
+- max function lines: 50
+```
+
+### `## architecture` (Freeform - uses AI)
+Freeform text rules are analyzed by AI:
+```
+- No business logic in UI components
+- API calls must go through service layer
 ```
 
 ---
@@ -117,7 +177,7 @@ specwatch check ./src --format json
 Configure AI provider for intelligent analysis.
 
 ```bash
-# Set up Anthropic (Claude)
+# Set up Anthropic (Claude Haiku 4.5)
 specwatch login --provider anthropic --api-key sk-ant-...
 
 # Set up OpenRouter
@@ -146,13 +206,17 @@ But AI catches complex issues:
 - ✅ "Missing error handling in async code"
 - ✅ "Security vulnerability in data flow"
 
+### ⚠️ Important: AI Budget Constraint
+
+**AI analysis fires at most once per 10 file saves**, and only when architecture rules require semantic judgment. This prevents excessive API costs.
+
 ### Supported AI Providers
 
-| Provider | Best For | Model |
-|----------|----------|-------|
-| **Anthropic** | Fast, cheap | Haiku 4.5 |
-| **OpenRouter** | Model variety (300+) | Claude variants |
-| **Google Gemini** | Google's models | Gemini 2.0 Flash |
+| Provider | Default Model | Notes |
+|----------|--------------|-------|
+| **Anthropic** | claude-haiku-4-5-20251002 | Direct API |
+| **OpenRouter** | anthropic/claude-4.5-haiku-20250929 | 300+ models |
+| **Google Gemini** | gemini-2.0-flash | Google's fastest model |
 
 ### Environment Setup
 
@@ -179,42 +243,6 @@ llm:
 watch:
   debounce: 800
   extensions: [go, ts, tsx, js, jsx]
-```
-
----
-
-## Rule Categories
-
-### 1. Naming Rules
-```markdown
-## naming
-- Files must use kebab-case
-- Components must use PascalCase
-- Hooks must start with "use"
-```
-
-### 2. Forbidden Patterns
-```markdown
-## forbidden
-- No console.log statements
-- No debugger statements
-- No TODO comments without assignee
-```
-
-### 3. Limits
-```markdown
-## limits
-- Max 200 lines per file
-- Max 10 imports per file
-- Max 3 levels of nesting
-```
-
-### 4. Architecture
-```markdown
-## architecture
-- UI components must not contain business logic
-- API calls must go through service layer
-- No direct database access in handlers
 ```
 
 ---
@@ -258,12 +286,12 @@ specwatch watch ./src --debounce 500
 │  ├── spec/parser   - Parse spec.md              │
 │  ├── analyzer/     - Run static checks           │
 │  ├── llm/          - AI-powered analysis         │
-│  └── watcher/      - File system monitoring      │
+│  └── watcher/      - File system monitoring     │
 ├─────────────────────────────────────────────────┤
 │  UI (Bubble Tea)                                 │
-│  ├── Activity feed - Recent checks               │
+│  ├── Activity feed - Recent checks              │
 │  ├── Violations    - Issues list                │
-│  └── Stats         - Error/warning counts        │
+│  └── Stats         - Error/warning counts       │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -277,26 +305,6 @@ specwatch watch ./src --debounce 500
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `CI` | Set to "true" in CI environments |
-
----
-
-## Example Workflow
-
-```bash
-# 1. Initialize project
-specwatch init
-
-# 2. Edit spec.md with your rules
-vim spec.md
-
-# 3. Configure AI (optional)
-specwatch login --provider anthropic --api-key YOUR_KEY
-
-# 4. Start watching
-specwatch watch ./src
-
-# 5. Fix violations as they appear
-```
 
 ---
 
@@ -315,6 +323,16 @@ specwatch login --provider anthropic --api-key YOUR_KEY
 ```bash
 # Create one
 specwatch init
+```
+
+### "No violations detected"
+Check your spec.md syntax! Freeform text won't work. Use:
+```
+- pattern: "console.log" message: Use logger
+```
+NOT:
+```
+- No console.log statements
 ```
 
 ### "Permission denied"
