@@ -7,6 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	version   = "dev"
+	commit    = "unknown"
+	date      = "unknown"
+	versionOk bool
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "specwatch",
 	Short: "specwatch is a tool for watching and analyzing specs",
@@ -21,5 +28,26 @@ func Execute() error {
 }
 
 func init() {
-	// Global flags can be defined here
+	rootCmd.AddCommand(watchCmd)
+	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("specwatch version %s\n", version)
+			fmt.Printf("  commit: %s\n", commit)
+			fmt.Printf("  date: %s\n", date)
+		},
+	})
+}
+
+func findSpecFile() string {
+	paths := []string{"spec.md", "./spec.md", "../spec.md"}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
 }

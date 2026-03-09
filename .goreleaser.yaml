@@ -1,0 +1,57 @@
+project_name: specwatch
+
+archives:
+  - id: default
+    builds:
+      - specwatch
+    formats:
+      - tar.gz
+      - zip
+    files:
+      - LICENSE
+      - README.md
+      - spec.md
+    checksum:
+      algorithm: sha256
+
+release:
+  draft: false
+  prerelease: auto
+  name: "{{ .Tag }}"
+  header: |
+    ## What's Changed
+    
+    Full changelog: https://github.com/rajeshshrirao/specwatch/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+github:
+  owner: rajeshshrirao
+  name: specwatch
+
+builds:
+  - id: specwatch
+    main: .
+    binary: specwatch
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/rajeshshrirao/specwatch/cmd.version={{ .Version }}
+      - -X github.com/rajeshshrirao/specwatch/cmd.commit={{ .Commit }}
+      - -X github.com/rajeshshrirao/specwatch/cmd.date={{ .Date }}
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^CI'
