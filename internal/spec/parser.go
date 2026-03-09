@@ -1,11 +1,11 @@
 package spec
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	specerr "github.com/rajeshshrirao/specwatch/internal/errors"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
@@ -15,7 +15,7 @@ import (
 func Parse(path string) (*RuleSet, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read spec file: %w", err)
+		return nil, specerr.Wrap(err, specerr.ErrCodeIO, "failed to read spec file")
 	}
 
 	md := goldmark.New()
