@@ -1,9 +1,7 @@
 package analyzer
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,24 +10,21 @@ import (
 )
 
 // CheckForbidden patterns — regex on file content
-func CheckForbidden(path string, rules []spec.ForbiddenRule) []Violation {
+func CheckForbidden(path string, rules []spec.ForbiddenRule, cache *FileCache) []Violation {
 	var violations []Violation
 
 	if len(rules) == 0 {
 		return violations
 	}
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
 	lineNum := 0
-	for scanner.Scan() {
+	for _, line := range content {
 		lineNum++
-		line := scanner.Text()
 
 		for _, rule := range rules {
 			if rule.Pattern != "" {
@@ -91,21 +86,19 @@ func CheckNaming(path string, rules spec.NamingRules) []Violation {
 }
 
 // CheckLimits: line count, import count
-func CheckLimits(path string, limits spec.LimitRules) []Violation {
+func CheckLimits(path string, limits spec.LimitRules, cache *FileCache) []Violation {
 	var violations []Violation
 
-	file, err := os.Open(path)
+	content, _, err := cache.GetFileContent(path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
 	lineCount := 0
 	importCount := 0
-	for scanner.Scan() {
+	for _, line := range content {
 		lineCount++
-		line := strings.TrimSpace(scanner.Text())
+		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "import ") {
 			importCount++
 		}

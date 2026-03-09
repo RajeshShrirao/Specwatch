@@ -17,13 +17,27 @@ type Engine struct {
 	SkipCategories []string
 	Extensions     []string
 	LLMClient      llm.LLMClient
+	Cache          *FileCache
+	MaxFileSizeMB  int
 }
 
 func NewEngine(rules *spec.RuleSet) *Engine {
 	return &Engine{
-		Rules:      rules,
-		Extensions: []string{".go", ".ts", ".tsx", ".js", ".jsx"},
+		Rules:         rules,
+		Extensions:    []string{".go", ".ts", ".tsx", ".js", ".jsx"},
+		Cache:         NewFileCache(100, 30), // 100MB cache, 30min TTL
+		MaxFileSizeMB: 10,                    // Default max file size: 10MB
 	}
+}
+
+// SetMaxFileSize sets the maximum file size in MB for analysis
+func (e *Engine) SetMaxFileSizeMB(mb int) {
+	e.MaxFileSizeMB = mb
+}
+
+// SetCacheCapacity configures the file cache capacity
+func (e *Engine) SetCacheCapacity(maxSizeMB int, ttlMinutes int) {
+	e.Cache = NewFileCache(maxSizeMB, ttlMinutes)
 }
 
 // SetLLMClient sets the LLM client for AI-powered analysis
@@ -116,9 +130,14 @@ func (e *Engine) Analyze(path string) ([]Violation, time.Duration) {
 		return violations, time.Since(start)
 	}
 
+	// Check file size limit
+	if FileSizeLimitExceeded(path, e.MaxFileSizeMB) {
+		return violations, time.Since(start)
+	}
+
 	// Check forbidden patterns
 	if !e.shouldSkip("forbidden") && len(e.Rules.Forbidden) > 0 {
-		violations = append(violations, CheckForbidden(path, e.Rules.Forbidden)...)
+		violations = append(violations, CheckForbidden(path, e.Rules.Forbidden, e.Cache)...)
 	}
 
 	// Check naming
@@ -128,17 +147,17 @@ func (e *Engine) Analyze(path string) ([]Violation, time.Duration) {
 
 	// Check limits
 	if !e.shouldSkip("limits") && (e.Rules.Limits.MaxFileLines > 0 || e.Rules.Limits.MaxImports > 0) {
-		violations = append(violations, CheckLimits(path, e.Rules.Limits)...)
+		violations = append(violations, CheckLimits(path, e.Rules.Limits, e.Cache)...)
 	}
 
 	// Check required try/catch for async functions
 	if !e.shouldSkip("required") {
-		violations = append(violations, CheckRequiredTryCatch(path)...)
+		violations = append(violations, CheckRequiredTryCatch(path, e.Cache)...)
 	}
 
 	// Check import boundaries for architecture rules
 	if !e.shouldSkip("architecture") && len(e.Rules.Architecture) > 0 {
-		violations = append(violations, CheckImportBoundaries(path, e.Rules.Architecture)...)
+		violations = append(violations, CheckImportBoundaries(path, e.Rules.Architecture, e.Cache)...)
 	}
 
 	return violations, time.Since(start)
