@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,21 +14,38 @@ import (
 )
 
 type Engine struct {
-	Rules          *spec.RuleSet
-	SkipCategories []string
-	Extensions     []string
-	LLMClient      llm.LLMClient
-	Cache          *FileCache
-	MaxFileSizeMB  int
+	Rules             *spec.RuleSet
+	SkipCategories    []string
+	Extensions        []string
+	LLMClient         llm.LLMClient
+	Cache             *FileCache
+	PatternCache      *PatternCache
+	CompiledForbidden map[string]*regexp.Regexp
+	MaxFileSizeMB     int
 }
 
 func NewEngine(rules *spec.RuleSet) *Engine {
-	return &Engine{
+	engine := &Engine{
 		Rules:         rules,
 		Extensions:    []string{".go", ".ts", ".tsx", ".js", ".jsx"},
 		Cache:         NewFileCache(100, 30), // 100MB cache, 30min TTL
+		PatternCache:  NewPatternCache(100),  // 100 pattern cache
 		MaxFileSizeMB: 10,                    // Default max file size: 10MB
 	}
+
+	// Pre-compile forbidden patterns
+	if len(rules.Forbidden) > 0 {
+		var patterns []string
+		for _, rule := range rules.Forbidden {
+			if rule.Pattern != "" {
+				patterns = append(patterns, rule.Pattern)
+			}
+		}
+		compiled, _ := PrecompileForbiddenPatterns(patterns, engine.PatternCache)
+		engine.CompiledForbidden = compiled
+	}
+
+	return engine
 }
 
 // SetMaxFileSize sets the maximum file size in MB for analysis
@@ -137,7 +155,7 @@ func (e *Engine) Analyze(path string) ([]Violation, time.Duration) {
 
 	// Check forbidden patterns
 	if !e.shouldSkip("forbidden") && len(e.Rules.Forbidden) > 0 {
-		violations = append(violations, CheckForbidden(path, e.Rules.Forbidden, e.Cache)...)
+		violations = append(violations, CheckForbidden(path, e.Rules.Forbidden, e.Cache, e.CompiledForbidden)...)
 	}
 
 	// Check naming
