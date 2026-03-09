@@ -155,7 +155,7 @@ func (m Model) View() string {
 		sb.WriteString(StyleTime.Render("No violations"))
 	} else {
 		for i, v := range m.Violations {
-			cursor := " "
+			var cursor string
 			if i == m.Cursor {
 				cursor = StyleViolationItem.Render("✗ ")
 			} else {

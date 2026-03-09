@@ -45,7 +45,7 @@ var watchCmd = &cobra.Command{
 
 		model := tui.InitialModel()
 
-		watcher.Watch(path, func(file string) {
+		if err := watcher.Watch(path, func(file string) {
 			violations, duration := engine.Analyze(file)
 			newModel, _ := model.Update(tui.NewViolationMsg{
 				File:       file,
@@ -53,11 +53,14 @@ var watchCmd = &cobra.Command{
 				Duration:   duration,
 			})
 			model = newModel.(tui.Model)
-		})
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error starting watcher: %v\n", err)
+			os.Exit(1)
+		}
 
 		p := tea.NewProgram(model)
-		if err := p.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error starting TUI: %v\n", err)
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 			os.Exit(1)
 		}
 
