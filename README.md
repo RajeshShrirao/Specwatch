@@ -95,7 +95,7 @@ Control Specwatch behavior via `.specwatch.yml`.
 llm:
   enabled: true
   provider: anthropic
-  model: claude-3-haiku-20240307
+  model: claude-haiku-4-5-20251002
   
 watch:
   debounce: 800
@@ -105,11 +105,26 @@ watch:
 
 ### 🧠 Smart LLM Usage
 
-For AI-powered checks, export your provider key:
+For AI-powered checks, configure your provider API key:
 
 ```bash
+# Using Anthropic (default)
 export ANTHROPIC_API_KEY="your-key-here"
+
+# Using OpenRouter (alternative)
+export OPENROUTER_API_KEY="your-key-here"
+
+# Using Google Gemini
+export GEMINI_API_KEY="your-key-here"
+
+# Or use the login command
+specwatch login --provider anthropic --api-key YOUR_KEY
 ```
+
+**Supported Providers:**
+- **Anthropic**: Claude Haiku 4.5, Sonnet, Opus
+- **OpenRouter**: 300+ models including Claude variants
+- **Google Gemini**: Gemini Flash, Pro models
 
 **Intelligence Profile:**
 - **Trigger**: Fires primarily on `## architecture` section rules.

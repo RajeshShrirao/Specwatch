@@ -1,11 +1,14 @@
 package analyzer
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/rajeshshrirao/specwatch/internal/llm"
 	"github.com/rajeshshrirao/specwatch/internal/spec"
 )
 
@@ -13,6 +16,7 @@ type Engine struct {
 	Rules          *spec.RuleSet
 	SkipCategories []string
 	Extensions     []string
+	LLMClient      llm.LLMClient
 }
 
 func NewEngine(rules *spec.RuleSet) *Engine {
@@ -20,6 +24,63 @@ func NewEngine(rules *spec.RuleSet) *Engine {
 		Rules:      rules,
 		Extensions: []string{".ts", ".tsx", ".js", ".jsx"},
 	}
+}
+
+// SetLLMClient sets the LLM client for AI-powered analysis
+func (e *Engine) SetLLMClient(client llm.LLMClient) {
+	e.LLMClient = client
+}
+
+// HasLLM returns true if an LLM client is configured
+func (e *Engine) HasLLM() bool {
+	return e.LLMClient != nil
+}
+
+// AnalyzeWithAI performs AI-powered analysis using the LLM
+func (e *Engine) AnalyzeWithAI(ctx context.Context, filePath, codeContent, ruleDescription string) ([]Violation, error) {
+	if e.LLMClient == nil {
+		return nil, fmt.Errorf("LLM client not configured")
+	}
+
+	prompt := fmt.Sprintf(`You are a code analyzer. Check if the following code violates this architectural rule: %s
+
+Code:
+%s
+
+Respond with a list of violations found, or "OK" if no violations.`, ruleDescription, codeContent)
+
+	result, err := e.LLMClient.Generate(ctx, prompt, "")
+	if err != nil {
+		return nil, fmt.Errorf("LLM generation failed: %w", err)
+	}
+
+	// Parse the LLM response - if it contains "OK", no violations
+	if strings.Contains(strings.ToLower(result), "ok") || strings.Contains(strings.ToLower(result), "no violations") {
+		return nil, nil
+	}
+
+	// Parse violations from LLM response
+	// This is a simple implementation - could be enhanced
+	violations := parseLLMViolations(filePath, result)
+	return violations, nil
+}
+
+func parseLLMViolations(filePath, response string) []Violation {
+	// Simple implementation - parse lines that look like violations
+	var violations []Violation
+	lines := strings.Split(response, "\n")
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) > 10 && !strings.HasPrefix(line, "OK") && !strings.HasPrefix(line, "No") {
+			violations = append(violations, Violation{
+				File:    filePath,
+				Line:    i + 1,
+				Rule:    "ai-analysis",
+				Excerpt: line,
+			})
+		}
+	}
+	return violations
 }
 
 func (e *Engine) shouldSkip(category string) bool {

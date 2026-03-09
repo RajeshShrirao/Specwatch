@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(watchCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(loginCmd)
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
