@@ -44,7 +44,7 @@ var checkCmd = &cobra.Command{
 		engine := analyzer.NewEngine(rules)
 		llmClient, _ := setupLLMClient(engine)
 		if llmClient != nil {
-			defer llmClient.Close()
+			defer func() { _ = llmClient.Close() }()
 		}
 
 		start := time.Now()

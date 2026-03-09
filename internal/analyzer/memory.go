@@ -66,6 +66,7 @@ func PutBuffer(buf []byte) {
 	// Only return if it has some capacity (avoid returning empty slices)
 	if cap(buf) > 0 {
 		// Create a new buffer from scratch to avoid pointer issues
+		//#nosec G602
 		newBuf := make([]byte, 0, cap(buf))
 		BufferPool.Put(newBuf)
 	}
