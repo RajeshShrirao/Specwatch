@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
@@ -17,7 +20,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
+          cache: true
 
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -38,17 +42,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
+          cache: true
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          args: --timeout=5m
 
-  build:
-    name: Build
+  specwatch-check:
+    name: Specwatch Check
     runs-on: ubuntu-latest
-    needs: [test, lint]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +61,56 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build specwatch
+        run: go build -o specwatch .
+
+      - name: Run specwatch check smoke test
+        run: |
+          mkdir -p /tmp/specwatch-fixture
+          cat <<'EOF' >/tmp/specwatch-fixture/spec.md
+          ## forbidden
+          - pattern: "console.log"
+            message: use structured logging
+          EOF
+
+          cat <<'EOF' >/tmp/specwatch-fixture/bad.js
+          console.log("debug")
+          EOF
+
+          if ./specwatch check /tmp/specwatch-fixture --format text; then
+            echo "expected specwatch check to fail on forbidden pattern"
+            exit 1
+          fi
+
+          cat <<'EOF' >/tmp/specwatch-fixture/good.js
+          export const answer = 42
+          EOF
+          rm /tmp/specwatch-fixture/bad.js
+
+          ./specwatch check /tmp/specwatch-fixture --format text
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, lint, specwatch-check]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
       - name: Build
         run: go build -o specwatch .
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: specwatch-linux-amd64
+          path: specwatch

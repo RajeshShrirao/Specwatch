@@ -102,6 +102,14 @@ Your spec.md → static checks (< 10ms) → AI only when needed (1 per 10 saves)
 go install github.com/rajeshshrirao/specwatch@latest
 ```
 
+Package managers:
+
+```bash
+brew install RajeshShrirao/tap/specwatch
+scoop bucket add specwatch https://github.com/RajeshShrirao/scoop-bucket
+scoop install specwatch/specwatch
+```
+
 ### Initialize
 
 ```bash
@@ -226,6 +234,19 @@ specwatch watch ./src --ext go,ts,tsx
 specwatch watch . --skip limits
 specwatch check . --format json
 ```
+
+## Distribution
+
+Specwatch ships as a standalone terminal binary.
+
+- GitHub Releases provide macOS, Linux, and Windows archives plus `checksums.txt`
+- Homebrew installs from `RajeshShrirao/homebrew-tap`
+- Scoop installs from `RajeshShrirao/scoop-bucket`
+- Go users can always install directly with `go install`
+
+Release automation is defined in [.goreleaser.yml](.goreleaser.yml) and
+[.github/workflows/release.yml](.github/workflows/release.yml). Setup details live in
+[docs/releasing.md](docs/releasing.md).
 
 ---
 
