@@ -1,0 +1,23 @@
+{
+  "version": "0.0.0",
+  "description": "Spec-driven architectural drift detector for the terminal",
+  "homepage": "https://github.com/RajeshShrirao/Specwatch",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/RajeshShrirao/Specwatch/releases/download/v0.0.0/specwatch_Windows_x86_64.zip",
+      "hash": "REPLACE_WITH_WINDOWS_AMD64_SHA256"
+    }
+  },
+  "bin": "specwatch.exe",
+  "checkver": {
+    "github": "https://github.com/RajeshShrirao/Specwatch"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/RajeshShrirao/Specwatch/releases/download/v$version/specwatch_Windows_x86_64.zip"
+      }
+    }
+  }
+}

@@ -1,0 +1,105 @@
+version: 2
+
+project_name: specwatch
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: specwatch
+    main: ./
+    binary: specwatch
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/rajeshshrirao/specwatch/cmd.version={{ .Version }}
+      - -X github.com/rajeshshrirao/specwatch/cmd.commit={{ .Commit }}
+      - -X github.com/rajeshshrirao/specwatch/cmd.date={{ .Date }}
+
+archives:
+  - id: default
+    ids:
+      - specwatch
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- if eq .Os "darwin" }}macOS
+      {{- else if eq .Os "windows" }}Windows
+      {{- else }}Linux{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - name: specwatch
+    repository:
+      owner: RajeshShrirao
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.GORELEASER_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/RajeshShrirao/Specwatch
+    description: Spec-driven architectural drift detector for the terminal
+    license: MIT
+    install: |
+      bin.install "specwatch"
+    test: |
+      assert_match "specwatch version", shell_output("#{bin}/specwatch version")
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+scoops:
+  - name: specwatch
+    repository:
+      owner: RajeshShrirao
+      name: scoop-bucket
+      branch: main
+      token: "{{ .Env.GORELEASER_GITHUB_TOKEN }}"
+    directory: bucket
+    homepage: https://github.com/RajeshShrirao/Specwatch
+    description: Spec-driven architectural drift detector for the terminal
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+release:
+  github:
+    owner: RajeshShrirao
+    name: Specwatch
