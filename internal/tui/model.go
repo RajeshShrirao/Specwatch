@@ -31,7 +31,6 @@ type Model struct {
 	ErrorCount int
 	WarnCount  int
 	Latency    string
-	ShowDetail bool
 	Cursor     int
 	Width      int
 	Height     int
@@ -198,10 +197,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ErrorCount = 0
 			m.WarnCount = 0
 			m.Cursor = 0
-		case "enter":
-			if len(m.Violations) > 0 {
-				m.ShowDetail = !m.ShowDetail
-			}
 		}
 
 	case NewViolationMsg:
@@ -502,21 +497,17 @@ func (m Model) renderMainView() string {
 
 	headerH := 1
 	footerH := 1
-	detailH := 0
-	if m.ShowDetail && len(m.Violations) > 0 {
-		detailH = 9
-	}
+	detailH := 8
 
-	mainH := m.Height - headerH - footerH - detailH - 3
+	mainH := m.Height - headerH - footerH - detailH - 4
 	if mainH < 5 {
 		mainH = 5
 	}
 
-	leftW := max(25, m.Width/4)
-	rightW := 22
-	centerW := m.Width - leftW - rightW - 3
+	gap := 2
+	sidebarW := max(28, m.Width*30/100)
+	violationsW := m.Width - sidebarW - gap
 
-	// Header
 	statusDot := StyleStatusDot.Render("●")
 	if m.ErrorCount > 0 {
 		statusDot = StyleStatusDotError.Render("●")
@@ -529,46 +520,19 @@ func (m Model) renderMainView() string {
 	)
 	header := StyleHeader.Width(m.Width).Render(headerContent)
 
-	// Left Panel - Activity
-	leftB := new(strings.Builder)
-	leftB.WriteString(StyleStatLabel.Render(" ACTIVITY ") + "\n")
-	leftB.WriteString("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n")
-
-	maxAct := mainH - 3
-	visAct := m.Activity
-	if len(visAct) > maxAct {
-		visAct = visAct[:maxAct]
-	}
-
-	for _, item := range visAct {
-		dot := m.renderActivityStatus(item.Status)
-		filename := truncate(filepath.Base(item.File), leftW-18)
-		elapsed := time.Since(item.Timestamp).Round(time.Second).String()
-		fmt.Fprintf(leftB, "%s %-13s %s\n", dot, filename, StyleActivityTime.Render(elapsed))
-	}
-	if len(visAct) == 0 {
-		leftB.WriteString(StyleEmptyMuted.Render("  Waiting for file activity\n"))
-		leftB.WriteString(StyleFooterHint.Render("  Save a tracked file to start"))
-	}
-	leftPanel := StylePanel.Width(leftW).Height(mainH).Render(leftB.String())
-
-	// Center Panel - Violations
-	centerB := new(strings.Builder)
-	centerB.WriteString(StyleStatLabel.Render(" VIOLATIONS ") + "\n")
-	centerB.WriteString("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n")
+	violationsB := new(strings.Builder)
+	violationsB.WriteString(StyleSectionTitle.Render("VIOLATIONS") + "\n")
+	violationsB.WriteString(StyleSectionRule.Render(strings.Repeat("─", max(20, violationsW-6))) + "\n")
 
 	if len(m.Violations) == 0 {
-		centerB.WriteString(StyleEmptyTitle.Render("  No active drift"))
-		centerB.WriteString("\n")
+		violationsB.WriteString("\n")
+		violationsB.WriteString(StyleEmptyTitle.Render("No active drift") + "\n")
+		violationsB.WriteString(StyleFooterHint.Render("The watch loop is stable. Save a tracked file to run the next check.") + "\n")
 		if len(m.Activity) > 0 && m.Activity[0].Status == StatusResolved {
-			centerB.WriteString(StyleActivityResolved.Render("  Latest issue resolved successfully"))
-		} else {
-			centerB.WriteString(StyleFooterHint.Render("  Save a file to analyze"))
+			violationsB.WriteString("\n" + StyleActivityResolved.Render("Latest issue resolved successfully"))
 		}
-		centerB.WriteString("\n\n")
-		centerB.WriteString(StyleEmptyMuted.Render("  Specwatch will replace stale findings on the next event"))
 	} else {
-		maxViol := mainH - 3
+		maxViol := max(1, mainH-3)
 		start := 0
 		if m.Cursor >= maxViol {
 			start = m.Cursor - maxViol + 1
@@ -581,69 +545,76 @@ func (m Model) renderMainView() string {
 		for i := start; i < end; i++ {
 			v := m.Violations[i]
 			isSel := i == m.Cursor
-
-			loc := fmt.Sprintf("%s:%d", truncate(filepath.Base(v.File), 15), v.Line)
-			rule := truncate(v.Rule, centerW-22)
-
+			sevI := StyleViolationError.Render("✗")
+			if v.Severity == spec.SeverityWarning {
+				sevI = StyleViolationWarning.Render("⚠")
+			}
+			pathLine := fmt.Sprintf("%s  %s:%d", sevI, truncateMiddle(v.File, max(24, violationsW-16)), v.Line)
+			ruleLine := truncate(v.Rule, max(20, violationsW-8))
 			if isSel {
-				sevI := "✗"
-				if v.Severity == spec.SeverityWarning {
-					sevI = "⚠"
-				}
-				line := StyleViolationSelected.Render(fmt.Sprintf(" %s %s %s", sevI, loc, rule))
-				centerB.WriteString(line + "\n")
+				block := lipgloss.JoinVertical(
+					lipgloss.Left,
+					StyleViolationMeta.Render(pathLine),
+					StyleViolationRuleSelected.Render(ruleLine),
+				)
+				violationsB.WriteString(StyleViolationSelected.Width(max(20, violationsW-6)).Render(block) + "\n")
 			} else {
-				sevI := StyleViolationError.Render("✗")
-				if v.Severity == spec.SeverityWarning {
-					sevI = StyleViolationWarning.Render("⚠")
-				}
-				line := fmt.Sprintf(" %s %s %s", sevI, loc, StyleStatLabel.Render(rule))
-				centerB.WriteString(line + "\n")
+				violationsB.WriteString(pathLine + "\n")
+				violationsB.WriteString("  " + StyleViolationRule.Render(ruleLine) + "\n\n")
 			}
 		}
 	}
-	centerPanel := StylePanel.Width(centerW).Height(mainH).Render(centerB.String())
+	violationsPanel := StylePanel.Width(violationsW).Height(mainH).Render(violationsB.String())
 
-	// Right Panel - Stats
-	rightB := new(strings.Builder)
-	rightB.WriteString(StyleStatLabel.Render(" STATS ") + "\n")
-	rightB.WriteString("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n\n")
-
-	rightB.WriteString(StyleStatLabel.Render(" Files    "))
-	rightB.WriteString(StyleStatValue.Render(fmt.Sprintf("%d", m.TotalFiles)) + "\n")
-
-	rightB.WriteString(StyleStatLabel.Render(" Errors   "))
+	sidebarB := new(strings.Builder)
+	sidebarB.WriteString(StyleSectionTitle.Render("SIDEBAR") + "\n")
+	sidebarB.WriteString(StyleSectionRule.Render(strings.Repeat("─", max(12, sidebarW-6))) + "\n\n")
+	sidebarB.WriteString(StyleStatLabel.Render("Files") + " " + StyleStatValue.Render(fmt.Sprintf("%d", m.TotalFiles)) + "\n")
+	sidebarB.WriteString(StyleStatLabel.Render("Errors") + " ")
 	if m.ErrorCount > 0 {
-		rightB.WriteString(StyleStatError.Render(fmt.Sprintf("%d", m.ErrorCount)) + "\n")
+		sidebarB.WriteString(StyleStatError.Render(fmt.Sprintf("%d", m.ErrorCount)) + "\n")
 	} else {
-		rightB.WriteString(StyleStatSuccess.Render("0") + "\n")
+		sidebarB.WriteString(StyleStatSuccess.Render("0") + "\n")
 	}
-
-	rightB.WriteString(StyleStatLabel.Render(" Warnings "))
+	sidebarB.WriteString(StyleStatLabel.Render("Warnings") + " ")
 	if m.WarnCount > 0 {
-		rightB.WriteString(StyleStatWarning.Render(fmt.Sprintf("%d", m.WarnCount)) + "\n")
+		sidebarB.WriteString(StyleStatWarning.Render(fmt.Sprintf("%d", m.WarnCount)) + "\n")
 	} else {
-		rightB.WriteString(StyleStatSuccess.Render("0") + "\n")
+		sidebarB.WriteString(StyleStatSuccess.Render("0") + "\n")
 	}
+	sidebarB.WriteString(StyleStatLabel.Render("State") + " " + StyleHealthBadge.Render(strings.ToUpper(m.statusLabel())) + "\n")
+	sidebarB.WriteString("\n")
+	sidebarB.WriteString(StyleSectionTitle.Render("RECENT ACTIVITY") + "\n")
 
-	rightB.WriteString("\n")
-	rightB.WriteString(StyleStatLabel.Render(" State    "))
-	rightB.WriteString(StyleHealthBadge.Render(strings.ToUpper(m.statusLabel())) + "\n")
-	rightPanel := StylePanel.Width(rightW).Height(mainH).Render(rightB.String())
+	recent := m.Activity
+	if len(recent) > 3 {
+		recent = recent[:3]
+	}
+	if len(recent) == 0 {
+		sidebarB.WriteString(StyleEmptyMuted.Render("Waiting for file activity"))
+	} else {
+		for _, item := range recent {
+			sidebarB.WriteString(m.renderActivityStatus(item.Status) + "\n")
+			sidebarB.WriteString("  " + truncateMiddle(item.File, max(16, sidebarW-8)) + "\n")
+			sidebarB.WriteString("  " + StyleActivityTime.Render(time.Since(item.Timestamp).Round(time.Second).String()) + "\n\n")
+		}
+	}
+	sidebar := StyleSidebarCard.Width(sidebarW).Height(mainH).Render(sidebarB.String())
 
-	// Detail Panel
-	detailView := ""
-	if m.ShowDetail && len(m.Violations) > 0 && m.Cursor < len(m.Violations) {
+	detailB := new(strings.Builder)
+	detailB.WriteString(StyleSectionTitle.Render("DETAIL") + "\n")
+	detailB.WriteString(StyleSectionRule.Render(strings.Repeat("─", max(20, m.Width-6))) + "\n")
+	if len(m.Violations) > 0 && m.Cursor < len(m.Violations) {
 		v := m.Violations[m.Cursor]
 		sevL := StyleViolationError.Render(" ERROR ")
 		if v.Severity == spec.SeverityWarning {
 			sevL = StyleViolationWarning.Render(" WARNING ")
 		}
-
-		detContent := fmt.Sprintf(
+		detailB.WriteString("\n")
+		detailB.WriteString(fmt.Sprintf(
 			"%s %s  %s\n\n%s %s\n%s %s\n%s %s\n%s\n%s %s",
 			StyleDetailKey.Render("File:"),
-			StyleDetailValue.Render(v.File),
+			StyleDetailValue.Render(truncateMiddle(v.File, max(24, m.Width-28))),
 			sevL,
 			StyleDetailKey.Render("Line:"),
 			StyleDetailValue.Render(fmt.Sprintf("%d", v.Line)),
@@ -651,20 +622,22 @@ func (m Model) renderMainView() string {
 			StyleDetailValue.Render(v.Rule),
 			StyleDetailKey.Render("Severity:"),
 			StyleDetailValue.Render(string(v.Severity)),
-			StyleDetailCode.Render(truncate(v.Excerpt, m.Width-20)),
+			StyleDetailCode.Render(truncate(v.Excerpt, max(24, m.Width-20))),
 			StyleDetailKey.Render("Fix:"),
-			StyleDetailSuggestion.Render(truncate(v.Suggestion, m.Width-20)),
-		)
-		detailView = StyleDetail.Width(m.Width - 2).Height(detailH - 1).Render(detContent)
+			StyleDetailSuggestion.Render(truncate(v.Suggestion, max(24, m.Width-20))),
+		))
+	} else {
+		detailB.WriteString("\n")
+		detailB.WriteString(StyleEmptyTitle.Render("Clean state") + "\n")
+		detailB.WriteString(StyleFooterHint.Render("No violation is selected because there is no active drift.") + "\n")
+		detailB.WriteString(StyleEmptyMuted.Render("When a rule is triggered, this area will pin the file, excerpt, and suggested fix without moving the rest of the layout."))
 	}
+	detailView := StyleDetail.Width(m.Width).Height(detailH).Render(detailB.String())
 
-	// Footer
 	footerC := fmt.Sprintf(
-		" %s %s %s %s %s %s %s %s %s",
+		" %s %s %s %s %s %s %s",
 		StyleFooterKey.Render("↑↓"),
 		StyleFooterHint.Render("Nav"),
-		StyleFooterKey.Render("ENT"),
-		StyleFooterHint.Render("Detail"),
 		StyleFooterKey.Render("C"),
 		StyleFooterHint.Render("Clear"),
 		StyleFooterKey.Render("Q"),
@@ -673,8 +646,7 @@ func (m Model) renderMainView() string {
 	)
 	footer := StyleFooter.Width(m.Width).Render(footerC)
 
-	// Combine
-	panels := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, centerPanel, rightPanel)
+	panels := lipgloss.JoinHorizontal(lipgloss.Top, violationsPanel, strings.Repeat(" ", gap), sidebar)
 
 	return StyleBase.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
@@ -750,17 +722,29 @@ func (m Model) renderCompactView() string {
 	}
 
 	footer := StyleFooter.Width(max(32, m.Width)).Render(
-		fmt.Sprintf(" %s %s %s %s", StyleFooterKey.Render("Q"), StyleFooterHint.Render("Quit"), StyleFooterKey.Render("ENT"), StyleFooterHint.Render("Detail")),
+		fmt.Sprintf(" %s %s %s %s %s %s", StyleFooterKey.Render("↑↓"), StyleFooterHint.Render("Nav"), StyleFooterKey.Render("C"), StyleFooterHint.Render("Clear"), StyleFooterKey.Render("Q"), StyleFooterHint.Render("Quit")),
 	)
 
 	return StyleBase.Render(lipgloss.JoinVertical(lipgloss.Left, header, summary, footer))
 }
 
 func truncate(s string, maxLen int) string {
+	if maxLen <= 3 {
+		return s
+	}
 	if len(s) <= maxLen {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+func truncateMiddle(s string, maxLen int) string {
+	if maxLen <= 5 || len(s) <= maxLen {
+		return s
+	}
+	left := (maxLen - 3) / 2
+	right := maxLen - 3 - left
+	return s[:left] + "..." + s[len(s)-right:]
 }
 
 func max(a, b int) int {

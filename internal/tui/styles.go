@@ -105,9 +105,8 @@ var (
 
 	// Panels
 	StylePanel = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorBorder).
-			Background(ColorBgAlt)
+			Background(ColorBgAlt).
+			Padding(1, 2)
 
 	StylePanelHeader = lipgloss.NewStyle().
 				Foreground(ColorMuted).
@@ -151,6 +150,16 @@ var (
 	StyleViolationPrefix = lipgloss.NewStyle().
 				Bold(true)
 
+	StyleViolationMeta = lipgloss.NewStyle().
+				Foreground(ColorMuted)
+
+	StyleViolationRule = lipgloss.NewStyle().
+				Foreground(ColorText)
+
+	StyleViolationRuleSelected = lipgloss.NewStyle().
+					Foreground(ColorText).
+					Bold(true)
+
 	// Stats
 	StyleStatLabel = lipgloss.NewStyle().
 			Foreground(ColorMuted).
@@ -184,8 +193,6 @@ var (
 
 	// Detail Panel
 	StyleDetail = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorBorderLight).
 			Background(ColorBgAlt).
 			Padding(1, 2)
 
@@ -238,6 +245,19 @@ var (
 				Foreground(ColorSuccess).
 				Italic(true).
 				Bold(true)
+
+	StyleSectionTitle = lipgloss.NewStyle().
+				Foreground(ColorMuted).
+				Bold(true)
+
+	StyleSectionRule = lipgloss.NewStyle().
+				Foreground(ColorBorder).
+				Bold(true)
+
+	StyleSidebarCard = lipgloss.NewStyle().
+				Background(ColorBgAlt).
+				Padding(1, 2)
 )
 
-var monitorWidth int
+// Default monitor width for initial render before window resize event
+var monitorWidth = 80

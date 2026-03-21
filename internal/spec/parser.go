@@ -192,14 +192,36 @@ func parseForbidden(list *ast.List, source []byte) []ForbiddenRule {
 func parseRequired(list *ast.List, source []byte) []RequiredRule {
 	var rules []RequiredRule
 	for item := list.FirstChild(); item != nil; item = item.NextSibling() {
-		line := strings.TrimSpace(string(item.FirstChild().Text(source)))
+		// Get all text from the list item - TextBlock contains the text
+		var fullText strings.Builder
+
+		// TextBlock is the container, we need to get text from it
+		if textBlock, ok := item.FirstChild().(*ast.TextBlock); ok {
+			fullText.WriteString(string(textBlock.Text(source)))
+		}
+
+		line := strings.TrimSpace(fullText.String())
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) < 2 {
 			continue
 		}
+
+		target := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		var message string
+		checkVal := val
+
+		// Look for message: in the value (similar to parseForbidden)
+		// IMPORTANT: Extract message from val BEFORE mutating checkVal
+		if idx := strings.Index(val, "message:"); idx != -1 {
+			message = strings.TrimSpace(val[idx+8:])
+			checkVal = strings.TrimSpace(val[:idx])
+		}
+
 		rules = append(rules, RequiredRule{
-			Target: strings.TrimSpace(parts[0]),
-			Check:  strings.TrimSpace(parts[1]),
+			Target:  target,
+			Check:   checkVal,
+			Message: message,
 		})
 	}
 	return rules
