@@ -1,50 +1,50 @@
 # specwatch
 
 ## stack
-- language: typescript
-- framework: next.js@14
-- styling: tailwind
-- runtime: node@20
+- language: go
+- framework:
+- runtime: go@1.22
 
 ## structure
-- components: src/components/**
-- api routes: src/app/api/**
-- utilities: src/lib/**
-- types: src/types/**
-- tests: **/*.test.ts, **/*.spec.ts
+- commands: cmd/**
+- internal packages: internal/**
+- main packages: pkg/**
+- tests: **/*_test.go
 
 ## naming
-- components: PascalCase
-- functions: camelCase
-- files: kebab-case
-- constants: SCREAMING_SNAKE_CASE
-- interfaces: PascalCase prefixed with I
+- packages: lowercase, short names
+- functions: PascalCase (exported), camelCase (unexported)
+- files: snake_case.go
+- constants: PascalCase
+- interfaces: PascalCase with -er suffix when appropriate
+- errors: error types prefixed with Err
 
 ## forbidden
-- pattern: "console.log"
-  message: use logger utility from @/lib/logger
-- pattern: "any"
-  message: no any types — use unknown or explicit type
-- pattern: "style={{"
-  message: no inline styles — use tailwind classes
-- import: "lodash"
-  message: use native ES methods
-- import: "moment"
-  message: use date-fns instead
+- pattern: "fmt.Printf"
+  message: use structured logging (zap, zerolog, or klog)
+- pattern: "panic("
+  message: avoid panics — return errors instead
+- pattern: "//TODO"
+  message: use //FIXME or track in issue tracker
+- pattern: "time.Sleep"
+  message: use context with timeout for operations
+- import: "encoding/json"
+  message: use json-iterator/go for better performance
 
 ## required
-- async functions: try/catch
-- api routes: return type { data, error }
-- components: must have displayName
-- new files in src/components: must have matching *.test.ts
+- exported functions: must have doc comments
+- errors: wrap with fmt.Errorf("...: %w", err)
+- main: must use cobra for CLI structure
+- config: use viper for configuration management
 
 ## architecture
-- no direct db calls outside src/lib/db
-- no business logic in components — belongs in hooks or lib
-- server components by default — client components need explicit justification
+- no business logic in cmd/ — belongs in internal/
+- no circular dependencies between internal packages
+- use interfaces for external dependencies
+- pass context as first argument to functions
 
 ## limits
-- max file lines: 300
+- max file lines: 500
 - max function lines: 50
 - max imports per file: 20
-- max component props: 8
+- max parameters per function: 6

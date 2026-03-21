@@ -50,7 +50,10 @@ type RequiredRule struct {
 }
 
 type ArchitectureRule struct {
-	Description string // e.g., "no direct db calls outside src/lib/db"
+	ID                string   // e.g., "architecture.no_direct_db"
+	Description       string   // e.g., "no direct db calls outside src/lib/db"
+	ExemptPathPattern string   // e.g., "src/lib/db" - path pattern that is exempt from this rule
+	Patterns          []string // explicit patterns to match (regex, case-insensitive)
 }
 
 type LimitRules struct {

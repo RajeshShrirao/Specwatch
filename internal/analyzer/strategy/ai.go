@@ -130,10 +130,87 @@ func (s *AIStrategy) parseLLMViolations(filePath, response string) []analyzer.Vi
 	var violations []analyzer.Violation
 	lines := strings.Split(response, "\n")
 
+	// Keywords that indicate an actual violation line (not explanatory text)
+	violationIndicators := []string{
+		"violation",
+		"error",
+		"warning",
+		"line:",
+		"line ",
+		"- violation",
+		"* violation",
+		"1.",
+		"2.",
+		"3.",
+		"4.",
+		"5.",
+	}
+
+	// Keywords that indicate explanatory/justification text (not violations)
+	explanationIndicators := []string{
+		"because",
+		"this is",
+		"however",
+		"although",
+		"therefore",
+		"since",
+		"reason",
+		"explanation",
+		"justification",
+		"note:",
+		"note ",
+	}
+
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
-		// Filter out non-violation lines
-		if len(line) > 10 && !strings.HasPrefix(line, "OK") && !strings.HasPrefix(line, "No") {
+		lineLower := strings.ToLower(line)
+
+		// Skip short lines or obvious non-violation lines
+		if len(line) <= 10 {
+			continue
+		}
+
+		// Skip lines that clearly indicate no violations
+		if strings.HasPrefix(lineLower, "ok") || strings.HasPrefix(lineLower, "no") {
+			continue
+		}
+
+		// Skip lines that start with common explanation patterns
+		if strings.HasPrefix(lineLower, "-") || strings.HasPrefix(lineLower, "*") || strings.HasPrefix(lineLower, ">") {
+			// Check if it's an explanation line
+			hasExplanationIndicator := false
+			for _, exp := range explanationIndicators {
+				if strings.Contains(lineLower, exp) {
+					hasExplanationIndicator = true
+					break
+				}
+			}
+			if hasExplanationIndicator {
+				continue
+			}
+		}
+
+		// Check if line contains violation indicators
+		hasViolationIndicator := false
+		for _, indicator := range violationIndicators {
+			if strings.Contains(lineLower, indicator) {
+				hasViolationIndicator = true
+				break
+			}
+		}
+
+		// Also check for explanation indicators in the line
+		foundExplanation := false
+		for _, exp := range explanationIndicators {
+			if strings.Contains(lineLower, exp) {
+				foundExplanation = true
+				break
+			}
+		}
+
+		// Only skip the line when there is NO violation indicator AND there IS an explanation indicator
+		// This allows real violations to be detected even when explanation text is also present
+		if hasViolationIndicator || !foundExplanation {
 			violations = append(violations, analyzer.Violation{
 				File:     filePath,
 				Line:     i + 1,
