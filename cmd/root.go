@@ -73,7 +73,14 @@ func init() {
 	})
 }
 
-func findSpecFile() string {
+func findSpecFile(targetPath string) string {
+	// First check in the target directory
+	specInTarget := filepath.Join(targetPath, "spec.md")
+	if _, err := os.Stat(specInTarget); err == nil {
+		return specInTarget
+	}
+
+	// Then check in the current directory and parent directories
 	paths := []string{"spec.md", "./spec.md", "../spec.md"}
 	for _, p := range paths {
 		if _, err := os.Stat(p); err == nil {

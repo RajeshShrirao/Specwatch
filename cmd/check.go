@@ -25,7 +25,7 @@ var checkCmd = &cobra.Command{
 			path = args[0]
 		}
 
-		specPath := findSpecFile()
+		specPath := findSpecFile(path)
 		if specPath == "" {
 			fmt.Println("No spec.md found. Run 'specwatch init' to create one.")
 			os.Exit(1)
